@@ -1,0 +1,38 @@
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+   xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
+   <modelVersion>4.0.0</modelVersion>
+   <name>Android Support Annotations</name>
+   <parent>
+      <groupId>us.nineworlds.android</groupId>
+      <artifactId>adt-android-support</artifactId>
+      <version>21.0.0-SNAPSHOT</version>
+   </parent>
+
+   <artifactId>support-annotations</artifactId>
+   <packaging>jar</packaging>
+
+   <properties>
+      <android-version>4.2.2_r2</android-version>
+   </properties>
+
+   <dependencies>
+      <dependency>
+         <groupId>android</groupId>
+         <artifactId>android</artifactId>
+         <version>4.3_r2</version>
+         <scope>provided</scope>
+      </dependency>
+   </dependencies>
+
+   <build>
+      <plugins>
+         <plugin>
+            <artifactId>maven-compiler-plugin</artifactId>
+            <configuration>
+               <source>1.6</source>
+               <target>1.6</target>
+            </configuration>
+         </plugin>
+      </plugins>
+   </build>
+</project>
