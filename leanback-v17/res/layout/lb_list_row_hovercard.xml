@@ -29,4 +29,4 @@
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         style="?attr/rowHoverCardDescriptionStyle" />
-</LinearLayout><!-- From: file:/usr/local/google/buildbot/repo_clients/https___googleplex-android.googlesource.com_a_platform_manifest.git/lmp-preview-release/frameworks/support/v17/leanback/res/layout/lb_list_row_hovercard.xml -->
+</LinearLayout>

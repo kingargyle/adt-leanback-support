@@ -16,15 +16,24 @@ package android.support.v17.leanback.widget;
 import android.support.v17.leanback.R;
 import android.content.res.Resources;
 import android.graphics.Color;
+import android.graphics.Outline;
 import android.graphics.drawable.ColorDrawable;
 import android.graphics.drawable.Drawable;
 import android.view.ViewGroup;
 import android.view.View;
+import android.view.ViewOutlineProvider;
 
 class ShadowHelperApi21 {
 
     static int sNormalZ = Integer.MIN_VALUE;
     static int sFocusedZ;
+    static final ViewOutlineProvider sOutlineProvider = new ViewOutlineProvider() {
+        @Override
+        public void getOutline(View view, Outline outline) {
+            outline.setRect(0, 0, view.getWidth(), view.getHeight());
+            outline.setAlpha(1.0f);
+        }
+    };
 
     private static void initializeResources(Resources res) {
         if (sNormalZ == Integer.MIN_VALUE) {
@@ -34,9 +43,14 @@ class ShadowHelperApi21 {
     }
 
     /* add shadows and return a implementation detail object */
-    public static Object addShadow(ViewGroup shadowContainer) {
+    public static Object addShadow(ViewGroup shadowContainer, boolean roundedCorners) {
         initializeResources(shadowContainer.getResources());
-        shadowContainer.setBackground(new ColorDrawable(Color.TRANSPARENT));
+        if (roundedCorners) {
+            RoundedRectHelperApi21.setRoundedRectBackground(shadowContainer,
+                    Color.TRANSPARENT);
+        } else {
+            shadowContainer.setOutlineProvider(sOutlineProvider);
+        }
         shadowContainer.setZ(sNormalZ);
         return shadowContainer;
     }
@@ -47,8 +61,7 @@ class ShadowHelperApi21 {
         shadowContainer.setZ(sNormalZ + level * (sFocusedZ - sNormalZ));
     }
 
-    public static void setZ(View view, float level) {
-        initializeResources(view.getResources());
-        view.setZ(sNormalZ + level * (sFocusedZ - sNormalZ));
+    public static void setZ(View view, float z) {
+        view.setZ(z);
     }
 }

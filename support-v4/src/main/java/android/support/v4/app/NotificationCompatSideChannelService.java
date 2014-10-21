@@ -19,6 +19,7 @@ package android.support.v4.app;
 import android.app.Notification;
 import android.app.Service;
 import android.content.Intent;
+import android.os.Build;
 import android.os.IBinder;
 import android.os.RemoteException;
 
@@ -44,6 +45,11 @@ public abstract class NotificationCompatSideChannelService extends Service {
     @Override
     public IBinder onBind(Intent intent) {
         if (intent.getAction().equals(NotificationManagerCompat.ACTION_BIND_SIDE_CHANNEL)) {
+            // Block side channel service connections if the current sdk has no need for
+            // side channeling.
+            if (Build.VERSION.SDK_INT > NotificationManagerCompat.MAX_SIDE_CHANNEL_SDK_VERSION) {
+                return null;
+            }
             return new NotificationSideChannelStub();
         }
         return null;

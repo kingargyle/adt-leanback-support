@@ -23,4 +23,3 @@
     <item android:drawable="@color/lb_grey" android:id="@+id/background_imagein"/>
     <item android:drawable="@color/lb_background_protection" android:id="@+id/background_dim" />
 </layer-list>
-<!-- From: file:/usr/local/google/buildbot/repo_clients/https___googleplex-android.googlesource.com_a_platform_manifest.git/lmp-preview-release/frameworks/support/v17/leanback/res/drawable/lb_background.xml -->

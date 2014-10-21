@@ -28,6 +28,7 @@ import android.view.animation.AccelerateDecelerateInterpolator;
 import android.view.animation.Animation;
 import android.view.animation.DecelerateInterpolator;
 import android.view.animation.Transformation;
+import android.widget.FrameLayout;
 
 import java.util.ArrayList;
 
@@ -48,7 +49,7 @@ import java.util.ArrayList;
  * See {@link BaseCardView.LayoutParams} for layout attributes.
  * </p>
  */
-public class BaseCardView extends ViewGroup {
+public class BaseCardView extends FrameLayout {
     private static final String TAG = "BaseCardView";
     private static final boolean DEBUG = false;
 
@@ -127,6 +128,9 @@ public class BaseCardView extends ViewGroup {
     private float mInfoVisFraction;
     private float mInfoAlpha = 1.0f;
     private Animation mAnim;
+
+    private final static int[] LB_PRESSED_STATE_SET = new int[]{
+        android.R.attr.state_pressed};
 
     private final Runnable mAnimationTrigger = new Runnable() {
         @Override
@@ -245,6 +249,14 @@ public class BaseCardView extends ViewGroup {
         return mCardType;
     }
 
+    /**
+     * Sets the visibility of the info region of the card.
+     *
+     * @param visibility The region visibility to use for the info region. Must
+     *     be one of {@link #CARD_REGION_VISIBLE_ALWAYS},
+     *     {@link #CARD_REGION_VISIBLE_SELECTED}, or
+     *     {@link #CARD_REGION_VISIBLE_ACTIVATED}.
+     */
     public void setInfoVisibility(int visibility) {
         if (mInfoVisibility != visibility) {
             mInfoVisibility = visibility;
@@ -257,10 +269,21 @@ public class BaseCardView extends ViewGroup {
         }
     }
 
+    /**
+     * Returns the visibility of the info region of the card.
+     */
     public int getInfoVisibility() {
         return mInfoVisibility;
     }
 
+    /**
+     * Sets the visibility of the extra region of the card.
+     *
+     * @param visibility The region visibility to use for the extra region. Must
+     *     be one of {@link #CARD_REGION_VISIBLE_ALWAYS},
+     *     {@link #CARD_REGION_VISIBLE_SELECTED}, or
+     *     {@link #CARD_REGION_VISIBLE_ACTIVATED}.
+     */
     public void setExtraVisibility(int visibility) {
         if (mExtraVisibility != visibility) {
             mExtraVisibility = visibility;
@@ -268,6 +291,9 @@ public class BaseCardView extends ViewGroup {
         }
     }
 
+    /**
+     * Returns the visibility of the extra region of the card.
+     */
     public int getExtraVisibility() {
         return mExtraVisibility;
     }
@@ -443,6 +469,8 @@ public class BaseCardView extends ViewGroup {
                 }
             }
         }
+        // Force update drawable bounds.
+        onSizeChanged(0, 0, right - left, bottom - top);
     }
 
     @Override
@@ -512,6 +540,32 @@ public class BaseCardView extends ViewGroup {
             }
         }
 
+    }
+
+    @Override
+    protected int[] onCreateDrawableState(int extraSpace) {
+        // filter out focus states,  since leanback does not fade foreground on focus.
+        final int[] s = super.onCreateDrawableState(extraSpace);
+        final int N = s.length;
+        boolean pressed = false;
+        boolean enabled = false;
+        for (int i = 0; i < N; i++) {
+            if (s[i] == android.R.attr.state_pressed) {
+                pressed = true;
+            }
+            if (s[i] == android.R.attr.state_enabled) {
+                enabled = true;
+            }
+        }
+        if (pressed && enabled) {
+            return View.PRESSED_ENABLED_STATE_SET;
+        } else if (pressed) {
+            return LB_PRESSED_STATE_SET;
+        } else if (enabled) {
+            return View.ENABLED_STATE_SET;
+        } else {
+            return View.EMPTY_STATE_SET;
+        }
     }
 
     private void applyActiveState(boolean active) {
@@ -735,7 +789,7 @@ public class BaseCardView extends ViewGroup {
     /**
      * Per-child layout information associated with BaseCardView.
      */
-    public static class LayoutParams extends ViewGroup.LayoutParams {
+    public static class LayoutParams extends FrameLayout.LayoutParams {
         public static final int VIEW_TYPE_MAIN = 0;
         public static final int VIEW_TYPE_INFO = 1;
         public static final int VIEW_TYPE_EXTRA = 2;

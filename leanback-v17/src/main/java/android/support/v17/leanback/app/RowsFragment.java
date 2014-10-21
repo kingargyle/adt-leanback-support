@@ -17,11 +17,12 @@ import java.util.ArrayList;
 
 import android.animation.TimeAnimator;
 import android.animation.TimeAnimator.TimeListener;
-import android.graphics.Canvas;
 import android.os.Bundle;
 import android.support.v17.leanback.R;
-import android.support.v17.leanback.graphics.ColorOverlayDimmer;
 import android.support.v17.leanback.widget.ItemBridgeAdapter;
+import android.support.v17.leanback.widget.OnItemViewClickedListener;
+import android.support.v17.leanback.widget.OnItemViewSelectedListener;
+import android.support.v17.leanback.widget.RowPresenter.ViewHolder;
 import android.support.v17.leanback.widget.VerticalGridView;
 import android.support.v17.leanback.widget.HorizontalGridView;
 import android.support.v17.leanback.widget.OnItemSelectedListener;
@@ -33,6 +34,7 @@ import android.support.v7.widget.RecyclerView;
 import android.util.Log;
 import android.view.View;
 import android.view.ViewGroup;
+import android.view.ViewTreeObserver;
 import android.view.animation.DecelerateInterpolator;
 import android.view.animation.Interpolator;
 
@@ -50,7 +52,6 @@ public class RowsFragment extends BaseRowFragment {
         final Presenter.ViewHolder mRowViewHolder;
 
         final TimeAnimator mSelectAnimator = new TimeAnimator();
-        final ColorOverlayDimmer mColorDimmer;
 
         int mSelectAnimatorDurationInUse;
         Interpolator mSelectAnimatorInterpolatorInUse;
@@ -61,12 +62,6 @@ public class RowsFragment extends BaseRowFragment {
             mRowPresenter = (RowPresenter) ibvh.getPresenter();
             mRowViewHolder = ibvh.getViewHolder();
             mSelectAnimator.setTimeListener(this);
-            if (mRowPresenter.getSelectEffectEnabled()
-                    && mRowPresenter.isUsingDefaultSelectEffect()) {
-                mColorDimmer = ColorOverlayDimmer.createDefault(ibvh.itemView.getContext());
-            } else {
-                mColorDimmer = null;
-            }
         }
 
         @Override
@@ -88,9 +83,6 @@ public class RowsFragment extends BaseRowFragment {
                 fraction = mSelectAnimatorInterpolatorInUse.getInterpolation(fraction);
             }
             float level =  mSelectLevelAnimStart + fraction * mSelectLevelAnimDelta;
-            if (mColorDimmer != null) {
-                mColorDimmer.setActiveLevel(level);
-            }
             mRowPresenter.setSelectLevel(mRowViewHolder, level);
         }
 
@@ -99,9 +91,6 @@ public class RowsFragment extends BaseRowFragment {
             final float end = select ? 1 : 0;
             if (immediate) {
                 mRowPresenter.setSelectLevel(mRowViewHolder, end);
-                if (mColorDimmer != null) {
-                    mColorDimmer.setActiveLevel(end);
-                }
             } else if (mRowPresenter.getSelectLevel(mRowViewHolder) != end) {
                 mSelectAnimatorDurationInUse = mSelectAnimatorDuration;
                 mSelectAnimatorInterpolatorInUse = mSelectAnimatorInterpolator;
@@ -119,11 +108,6 @@ public class RowsFragment extends BaseRowFragment {
             mSelectAnimator.end();
         }
 
-        void drawDimForSelection(Canvas c) {
-            if (mColorDimmer != null) {
-                mColorDimmer.drawColorOverlay(c, mRowViewHolder.view, false);
-            }
-        }
     }
 
     private static final String TAG = "RowsFragment";
@@ -132,9 +116,13 @@ public class RowsFragment extends BaseRowFragment {
     private ItemBridgeAdapter.ViewHolder mSelectedViewHolder;
     private boolean mExpand = true;
     private boolean mViewsCreated;
+    private float mRowScaleFactor;
+    private boolean mRowScaleEnabled;
 
     private OnItemSelectedListener mOnItemSelectedListener;
+    private OnItemViewSelectedListener mOnItemViewSelectedListener;
     private OnItemClickedListener mOnItemClickedListener;
+    private OnItemViewClickedListener mOnItemViewClickedListener;
 
     // Select animation and interpolator are not intended to be
     // exposed at this moment. They might be synced with vertical scroll
@@ -145,11 +133,14 @@ public class RowsFragment extends BaseRowFragment {
     private RecyclerView.RecycledViewPool mRecycledViewPool;
     private ArrayList<Presenter> mPresenterMapper;
 
+    private ItemBridgeAdapter.AdapterListener mExternalAdapterListener;
+
     /**
      * Sets an item clicked listener on the fragment.
      * OnItemClickedListener will override {@link View.OnClickListener} that
      * item presenter sets during {@link Presenter#onCreateViewHolder(ViewGroup)}.
      * So in general,  developer should choose one of the listeners but not both.
+     * @deprecated Use {@link #setOnItemViewClickedListener(OnItemViewClickedListener)}
      */
     public void setOnItemClickedListener(OnItemClickedListener listener) {
         mOnItemClickedListener = listener;
@@ -161,9 +152,31 @@ public class RowsFragment extends BaseRowFragment {
 
     /**
      * Returns the item clicked listener.
+     * @deprecated Use {@link #getOnItemClickedListener()}
      */
     public OnItemClickedListener getOnItemClickedListener() {
         return mOnItemClickedListener;
+    }
+
+    /**
+     * Sets an item clicked listener on the fragment.
+     * OnItemViewClickedListener will override {@link View.OnClickListener} that
+     * item presenter sets during {@link Presenter#onCreateViewHolder(ViewGroup)}.
+     * So in general,  developer should choose one of the listeners but not both.
+     */
+    public void setOnItemViewClickedListener(OnItemViewClickedListener listener) {
+        mOnItemViewClickedListener = listener;
+        if (mViewsCreated) {
+            throw new IllegalStateException(
+                    "Item clicked listener must be set before views are created");
+        }
+    }
+
+    /**
+     * Returns the item clicked listener.
+     */
+    public OnItemViewClickedListener getOnItemViewClickedListener() {
+        return mOnItemViewClickedListener;
     }
 
     /**
@@ -173,6 +186,7 @@ public class RowsFragment extends BaseRowFragment {
         mExpand = expand;
         VerticalGridView listView = getVerticalGridView();
         if (listView != null) {
+            updateRowScaling(!expand);
             final int count = listView.getChildCount();
             if (DEBUG) Log.v(TAG, "setExpand " + expand + " count " + count);
             for (int i = 0; i < count; i++) {
@@ -185,6 +199,7 @@ public class RowsFragment extends BaseRowFragment {
 
     /**
      * Sets an item selection listener.
+     * @deprecated Use {@link #setOnItemViewSelectedListener(OnItemViewSelectedListener)}
      */
     public void setOnItemSelectedListener(OnItemSelectedListener listener) {
         mOnItemSelectedListener = listener;
@@ -198,6 +213,39 @@ public class RowsFragment extends BaseRowFragment {
                 setOnItemSelectedListener(vh, mOnItemSelectedListener);
             }
         }
+    }
+
+    /**
+     * Sets an item selection listener.
+     */
+    public void setOnItemViewSelectedListener(OnItemViewSelectedListener listener) {
+        mOnItemViewSelectedListener = listener;
+        VerticalGridView listView = getVerticalGridView();
+        if (listView != null) {
+            final int count = listView.getChildCount();
+            for (int i = 0; i < count; i++) {
+                View view = listView.getChildAt(i);
+                ItemBridgeAdapter.ViewHolder vh = (ItemBridgeAdapter.ViewHolder)
+                        listView.getChildViewHolder(view);
+                setOnItemViewSelectedListener(vh, mOnItemViewSelectedListener);
+            }
+        }
+    }
+
+    /**
+     * Returns an item selection listener.
+     */
+    public OnItemViewSelectedListener getOnItemViewSelectedListener() {
+        return mOnItemViewSelectedListener;
+    }
+
+    /**
+     * Enables scaling of rows.
+     *
+     * @param enable true to enable row scaling
+     */
+    public void enableRowScaling(boolean enable) {
+        mRowScaleEnabled = enable;
     }
 
     @Override
@@ -230,7 +278,10 @@ public class RowsFragment extends BaseRowFragment {
     @Override
     public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        mSelectAnimatorDuration = getResources().getInteger(R.integer.lb_browse_rows_anim_duration);
+        mSelectAnimatorDuration = getResources().getInteger(
+                R.integer.lb_browse_rows_anim_duration);
+        mRowScaleFactor = getResources().getFraction(
+                R.fraction.lb_browse_rows_scale, 1, 1);
     }
 
     @Override
@@ -240,7 +291,7 @@ public class RowsFragment extends BaseRowFragment {
         // Align the top edge of child with id row_content.
         // Need set this for directly using RowsFragment.
         getVerticalGridView().setItemAlignmentViewId(R.id.row_content);
-        getVerticalGridView().addItemDecoration(mItemDecoration);
+        getVerticalGridView().setSaveChildrenPolicy(VerticalGridView.SAVE_LIMITED_CHILD);
 
         mRecycledViewPool = null;
         mPresenterMapper = null;
@@ -254,18 +305,9 @@ public class RowsFragment extends BaseRowFragment {
         }
     }
 
-    private RecyclerView.ItemDecoration mItemDecoration = new RecyclerView.ItemDecoration() {
-        @Override
-        public void onDrawOver(Canvas c, RecyclerView parent) {
-            final int count = parent.getChildCount();
-            for (int i = 0; i < count; i++) {
-                ItemBridgeAdapter.ViewHolder ibvh = (ItemBridgeAdapter.ViewHolder)
-                        parent.getChildViewHolder(parent.getChildAt(i));
-                RowViewHolderExtra extra = (RowViewHolderExtra) ibvh.getExtraObject();
-                extra.drawDimForSelection(c);
-            }
-        }
-    };
+    void setExternalAdapterListener(ItemBridgeAdapter.AdapterListener listener) {
+        mExternalAdapterListener = listener;
+    }
 
     private static void setRowViewExpanded(ItemBridgeAdapter.ViewHolder vh, boolean expanded) {
         ((RowPresenter) vh.getPresenter()).setRowViewExpanded(vh.getViewHolder(), expanded);
@@ -283,11 +325,20 @@ public class RowsFragment extends BaseRowFragment {
         ((RowPresenter) vh.getPresenter()).setOnItemSelectedListener(listener);
     }
 
+    private static void setOnItemViewSelectedListener(ItemBridgeAdapter.ViewHolder vh,
+            OnItemViewSelectedListener listener) {
+        ((RowPresenter) vh.getPresenter()).setOnItemViewSelectedListener(listener);
+    }
+
     private final ItemBridgeAdapter.AdapterListener mBridgeAdapterListener =
             new ItemBridgeAdapter.AdapterListener() {
         @Override
         public void onAddPresenter(Presenter presenter, int type) {
             ((RowPresenter) presenter).setOnItemClickedListener(mOnItemClickedListener);
+            ((RowPresenter) presenter).setOnItemViewClickedListener(mOnItemViewClickedListener);
+            if (mExternalAdapterListener != null) {
+                mExternalAdapterListener.onAddPresenter(presenter, type);
+            }
         }
         @Override
         public void onCreate(ItemBridgeAdapter.ViewHolder vh) {
@@ -295,13 +346,16 @@ public class RowsFragment extends BaseRowFragment {
             if (listView != null && ((RowPresenter) vh.getPresenter()).canDrawOutOfBounds()) {
                 listView.setClipChildren(false);
             }
-            setupSharedViewPool(vh.getViewHolder());
+            setupSharedViewPool(vh);
             mViewsCreated = true;
             vh.setExtraObject(new RowViewHolderExtra(vh));
             // selected state is initialized to false, then driven by grid view onChildSelected
             // events.  When there is rebind, grid view fires onChildSelected event properly.
             // So we don't need do anything special later in onBind or onAttachedToWindow.
             setRowViewSelected(vh, false, true);
+            if (mExternalAdapterListener != null) {
+                mExternalAdapterListener.onCreate(vh);
+            }
         }
         @Override
         public void onAttachedToWindow(ItemBridgeAdapter.ViewHolder vh) {
@@ -313,17 +367,43 @@ public class RowsFragment extends BaseRowFragment {
             // thing in onBind.
             setRowViewExpanded(vh, mExpand);
             setOnItemSelectedListener(vh, mOnItemSelectedListener);
+            setOnItemViewSelectedListener(vh, mOnItemViewSelectedListener);
+            if (mExternalAdapterListener != null) {
+                mExternalAdapterListener.onAttachedToWindow(vh);
+            }
+        }
+        @Override
+        public void onDetachedFromWindow(ItemBridgeAdapter.ViewHolder vh) {
+            if (mSelectedViewHolder == vh) {
+                setRowViewSelected(mSelectedViewHolder, false, true);
+                mSelectedViewHolder = null;
+            }
+            if (mExternalAdapterListener != null) {
+                mExternalAdapterListener.onDetachedFromWindow(vh);
+            }
+        }
+        @Override
+        public void onBind(ItemBridgeAdapter.ViewHolder vh) {
+            if (mExternalAdapterListener != null) {
+                mExternalAdapterListener.onBind(vh);
+            }
         }
         @Override
         public void onUnbind(ItemBridgeAdapter.ViewHolder vh) {
             RowViewHolderExtra extra = (RowViewHolderExtra) vh.getExtraObject();
             extra.endAnimations();
+            if (mExternalAdapterListener != null) {
+                mExternalAdapterListener.onUnbind(vh);
+            }
         }
     };
 
-    private void setupSharedViewPool(Presenter.ViewHolder viewHolder) {
-        if (viewHolder instanceof ListRowPresenter.ViewHolder) {
-            HorizontalGridView view = ((ListRowPresenter.ViewHolder) viewHolder).getGridView();
+    private void setupSharedViewPool(ItemBridgeAdapter.ViewHolder bridgeVh) {
+        RowPresenter rowPresenter = (RowPresenter) bridgeVh.getPresenter();
+        RowPresenter.ViewHolder rowVh = rowPresenter.getRowViewHolder(bridgeVh.getViewHolder());
+
+        if (rowVh instanceof ListRowPresenter.ViewHolder) {
+            HorizontalGridView view = ((ListRowPresenter.ViewHolder) rowVh).getGridView();
             // Recycled view pool is shared between all list rows
             if (mRecycledViewPool == null) {
                 mRecycledViewPool = view.getRecycledViewPool();
@@ -332,7 +412,7 @@ public class RowsFragment extends BaseRowFragment {
             }
 
             ItemBridgeAdapter bridgeAdapter =
-                    ((ListRowPresenter.ViewHolder) viewHolder).getBridgeAdapter();
+                    ((ListRowPresenter.ViewHolder) rowVh).getBridgeAdapter();
             if (mPresenterMapper == null) {
                 mPresenterMapper = bridgeAdapter.getPresenterMapper();
             } else {
@@ -353,4 +433,85 @@ public class RowsFragment extends BaseRowFragment {
         }
     }
 
+    @Override
+    void onTransitionStart() {
+        super.onTransitionStart();
+        freezeRows(true);
+    }
+
+    class ExpandPreLayout implements ViewTreeObserver.OnPreDrawListener {
+
+        final View mVerticalView;
+        final Runnable mCallback;
+        int mState;
+
+        final static int STATE_INIT = 0;
+        final static int STATE_FIRST_DRAW = 1;
+        final static int STATE_SECOND_DRAW = 2;
+
+        ExpandPreLayout(Runnable callback) {
+            mVerticalView = getVerticalGridView();
+            mCallback = callback;
+        }
+
+        void execute() {
+            mVerticalView.getViewTreeObserver().addOnPreDrawListener(this);
+            setExpand(false);
+            mState = STATE_INIT;
+        }
+
+        @Override
+        public boolean onPreDraw() {
+            if (mState == STATE_INIT) {
+                setExpand(true);
+                mState = STATE_FIRST_DRAW;
+            } else if (mState == STATE_FIRST_DRAW) {
+                mCallback.run();
+                mVerticalView.getViewTreeObserver().removeOnPreDrawListener(this);
+                mState = STATE_SECOND_DRAW;
+            }
+            return false;
+        }
+    }
+
+    void onExpandTransitionStart(boolean expand, final Runnable callback) {
+        onTransitionStart();
+        if (expand) {
+            callback.run();
+            return;
+        }
+        // Run a "pre" layout when we go non-expand, in order to get the initial
+        // positions of added rows.
+        new ExpandPreLayout(callback).execute();
+    }
+
+    private void updateRowScaling(boolean scale) {
+        VerticalGridView view = getVerticalGridView();
+        view.setClipChildren(!mRowScaleEnabled && scale);
+        view.setPrimaryOverReach((mRowScaleEnabled && scale) ? 1f / mRowScaleFactor : 1f);
+
+        final float scaleFactor = (mRowScaleEnabled && scale) ? mRowScaleFactor : 1f;
+        view.setScaleX(scaleFactor);
+        view.setScaleY(scaleFactor);
+    }
+
+    @Override
+    void onTransitionEnd() {
+        super.onTransitionEnd();
+        freezeRows(false);
+    }
+
+    private void freezeRows(boolean freeze) {
+        VerticalGridView verticalView = getVerticalGridView();
+        if (verticalView != null) {
+            final int count = verticalView.getChildCount();
+            for (int i = 0; i < count; i++) {
+                ItemBridgeAdapter.ViewHolder ibvh = (ItemBridgeAdapter.ViewHolder)
+                    verticalView.getChildViewHolder(verticalView.getChildAt(i));
+                RowPresenter rowPresenter = (RowPresenter) ibvh.getPresenter();
+                RowPresenter.ViewHolder vh = rowPresenter.getRowViewHolder(ibvh.getViewHolder());
+                rowPresenter.freeze(vh, freeze);
+            }
+        }
+    }
 }

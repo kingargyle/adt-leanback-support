@@ -15,12 +15,12 @@
      limitations under the License.
 -->
 <merge xmlns:android="http://schemas.android.com/apk/res/android">
-<LinearLayout
+<android.support.v17.leanback.widget.NonOverlappingLinearLayout
     android:id="@+id/lb_row_container_header_dock"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
     android:orientation="horizontal"
     android:paddingLeft="?attr/browsePaddingLeft"
     android:clipToPadding="false">
-</LinearLayout>
-</merge><!-- From: file:/usr/local/google/buildbot/repo_clients/https___googleplex-android.googlesource.com_a_platform_manifest.git/lmp-preview-release/frameworks/support/v17/leanback/res/layout/lb_row_container.xml -->
+</android.support.v17.leanback.widget.NonOverlappingLinearLayout>
+</merge>

@@ -25,6 +25,7 @@ final class ShadowHelper {
 
     final static ShadowHelper sInstance = new ShadowHelper();
     boolean mSupportsShadow;
+    boolean mUsesZShadow;
     ShadowHelperVersionImpl mImpl;
 
     /**
@@ -34,9 +35,9 @@ final class ShadowHelper {
 
         public void prepareParent(ViewGroup parent);
 
-        public Object addShadow(ViewGroup shadowContainer);
+        public Object addShadow(ViewGroup shadowContainer, boolean roundedCorners);
 
-        public void setZ(View view, float focusLevel);
+        public void setZ(View view, float z);
 
         public void setShadowFocusLevel(Object impl, float level);
 
@@ -53,7 +54,7 @@ final class ShadowHelper {
         }
 
         @Override
-        public Object addShadow(ViewGroup shadowContainer) {
+        public Object addShadow(ViewGroup shadowContainer, boolean roundedCorners) {
             // do nothing
             return null;
         }
@@ -64,7 +65,7 @@ final class ShadowHelper {
         }
 
         @Override
-        public void setZ(View view, float focusLevel) {
+        public void setZ(View view, float z) {
             // do nothing
         }
 
@@ -81,7 +82,8 @@ final class ShadowHelper {
         }
 
         @Override
-        public Object addShadow(ViewGroup shadowContainer) {
+        public Object addShadow(ViewGroup shadowContainer, boolean roundedCorners) {
+            // Rounded corners not supported
             return ShadowHelperJbmr2.addShadow(shadowContainer);
         }
 
@@ -91,7 +93,7 @@ final class ShadowHelper {
         }
 
         @Override
-        public void setZ(View view, float focusLevel) {
+        public void setZ(View view, float z) {
             // Not supported
         }
 
@@ -108,8 +110,8 @@ final class ShadowHelper {
         }
 
         @Override
-        public Object addShadow(ViewGroup shadowContainer) {
-            return ShadowHelperApi21.addShadow(shadowContainer);
+        public Object addShadow(ViewGroup shadowContainer, boolean roundedCorners) {
+            return ShadowHelperApi21.addShadow(shadowContainer, roundedCorners);
         }
 
         @Override
@@ -118,8 +120,8 @@ final class ShadowHelper {
         }
 
         @Override
-        public void setZ(View view, float focusLevel) {
-            ShadowHelperApi21.setZ(view, focusLevel);
+        public void setZ(View view, float z) {
+            ShadowHelperApi21.setZ(view, z);
         }
 
     }
@@ -128,9 +130,9 @@ final class ShadowHelper {
      * Returns the ShadowHelper.
      */
     private ShadowHelper() {
-     // TODO: we should use version number once "L" is published
-        if ("L".equals(Build.VERSION.RELEASE)) {
+        if (Build.VERSION.SDK_INT >= 21) {
             mSupportsShadow = true;
+            mUsesZShadow = true;
             mImpl = new ShadowHelperApi21Impl();
         } else if (Build.VERSION.SDK_INT >= 18) {
             mSupportsShadow = true;
@@ -149,12 +151,16 @@ final class ShadowHelper {
         return mSupportsShadow;
     }
 
+    public boolean usesZShadow() {
+        return mUsesZShadow;
+    }
+
     public void prepareParent(ViewGroup parent) {
         mImpl.prepareParent(parent);
     }
 
-    public Object addShadow(ViewGroup shadowContainer) {
-        return mImpl.addShadow(shadowContainer);
+    public Object addShadow(ViewGroup shadowContainer, boolean roundedCorners) {
+        return mImpl.addShadow(shadowContainer, roundedCorners);
     }
 
     public void setShadowFocusLevel(Object impl, float level) {
@@ -162,9 +168,10 @@ final class ShadowHelper {
     }
 
     /**
-     * Set the view z coordinate with the given focus level from 0..1.
+     * Set the view z coordinate.
      */
-    public void setZ(View view, float focusLevel) {
-        mImpl.setZ(view, focusLevel);
+    public void setZ(View view, float z) {
+        mImpl.setZ(view, z);
     }
+
 }

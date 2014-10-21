@@ -19,7 +19,7 @@
       <dependency>
          <groupId>android</groupId>
          <artifactId>android</artifactId>
-         <version>L_r1</version>
+         <version>5.0_r1</version>
          <scope>provided</scope>
       </dependency>
       <dependency>
@@ -39,7 +39,7 @@
             <extensions>true</extensions>
             <configuration>
                <sdk>
-                  <platform>L</platform>
+                  <platform>21</platform>
                </sdk>
             </configuration>
          </plugin>

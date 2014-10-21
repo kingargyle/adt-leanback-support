@@ -18,7 +18,7 @@
 <android.support.v17.leanback.widget.VerticalGridView
     xmlns:android="http://schemas.android.com/apk/res/android"
     android:id="@+id/browse_grid"
-    android:layout_width="match_parent"
+    android:layout_width="wrap_content"
     android:layout_height="match_parent"
+    android:layout_gravity="center"
     style="?attr/itemsVerticalGridStyle" />
-<!-- From: file:/usr/local/google/buildbot/repo_clients/https___googleplex-android.googlesource.com_a_platform_manifest.git/lmp-preview-release/frameworks/support/v17/leanback/res/layout/lb_vertical_grid.xml -->

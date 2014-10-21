@@ -49,6 +49,11 @@ public class NotificationCompat {
      * Use the default notification sound. This will ignore any sound set using
      * {@link Builder#setSound}
      *
+     * <p>
+     * A notification that is noisy is more likely to be presented as a heads-up notification,
+     * on some platforms.
+     * </p>
+     *
      * @see Builder#setDefaults
      */
     public static final int DEFAULT_SOUND = 1;
@@ -57,6 +62,11 @@ public class NotificationCompat {
      * Use the default notification vibrate. This will ignore any vibrate set using
      * {@link Builder#setVibrate}. Using phone vibration requires the
      * {@link android.Manifest.permission#VIBRATE VIBRATE} permission.
+     *
+     * <p>
+     * A notification that vibrates is more likely to be presented as a heads-up notification,
+     * on some platforms.
+     * </p>
      *
      * @see Builder#setDefaults
      */
@@ -219,6 +229,13 @@ public class NotificationCompat {
     public static final String EXTRA_SUMMARY_TEXT = "android.summaryText";
 
     /**
+     * Notification extras key: this is the longer text shown in the big form of a
+     * {@link BigTextStyle} notification, as supplied to
+     * {@link BigTextStyle#bigText(CharSequence)}.
+     */
+    public static final String EXTRA_BIG_TEXT = "android.bigText";
+
+    /**
      * Notification extras key: this is the resource ID of the notification's main small icon, as
      * supplied to {@link Builder#setSmallIcon(int)}.
      */
@@ -265,6 +282,12 @@ public class NotificationCompat {
     public static final String EXTRA_SHOW_CHRONOMETER = "android.showChronometer";
 
     /**
+     * Notification extras key: whether the when field set using {@link Builder#setWhen} should
+     * be shown, as supplied to {@link Builder#setShowWhen(boolean)}.
+     */
+    public static final String EXTRA_SHOW_WHEN = "android.showWhen";
+
+    /**
      * Notification extras key: this is a bitmap to be shown in {@link BigPictureStyle} expanded
      * notifications, supplied to {@link BigPictureStyle#bigPicture(android.graphics.Bitmap)}.
      */
@@ -277,10 +300,41 @@ public class NotificationCompat {
     public static final String EXTRA_TEXT_LINES = "android.textLines";
 
     /**
-     * Notification extras key: An array of people that this notification relates to, specified
-     * by contacts provider contact URI.
+     * Notification extras key: A string representing the name of the specific
+     * {@link android.app.Notification.Style} used to create this notification.
+     */
+    public static final String EXTRA_TEMPLATE = "android.template";
+
+    /**
+     * Notification extras key: A String array containing the people that this
+     * notification relates to, each of which was supplied to
+     * {@link Builder#addPerson(String)}.
      */
     public static final String EXTRA_PEOPLE = "android.people";
+
+    /**
+     * Notification extras key: A
+     * {@link android.content.ContentUris content URI} pointing to an image that can be displayed
+     * in the background when the notification is selected. The URI must point to an image stream
+     * suitable for passing into
+     * {@link android.graphics.BitmapFactory#decodeStream(java.io.InputStream)
+     * BitmapFactory.decodeStream}; all other content types will be ignored. The content provider
+     * URI used for this purpose must require no permissions to read the image data.
+     */
+    public static final String EXTRA_BACKGROUND_IMAGE_URI = "android.backgroundImageUri";
+
+    /**
+     * Notification key: A
+     * {@link android.media.session.MediaSession.Token} associated with a
+     * {@link android.app.Notification.MediaStyle} notification.
+     */
+    public static final String EXTRA_MEDIA_SESSION = "android.mediaSession";
+
+    /**
+     * Notification extras key: the indices of actions to be shown in the compact view,
+     * as supplied to (e.g.) {@link Notification.MediaStyle#setShowActionsInCompactView(int...)}.
+     */
+    public static final String EXTRA_COMPACT_ACTIONS = "android.compactActions";
 
     /**
      * Value of {@link Notification#color} equal to 0 (also known as
@@ -312,6 +366,79 @@ public class NotificationCompat {
      */
     public static final int VISIBILITY_SECRET = -1;
 
+    /**
+     * Notification category: incoming call (voice or video) or similar synchronous communication request.
+     */
+    public static final String CATEGORY_CALL = NotificationCompatApi21.CATEGORY_CALL;
+
+    /**
+     * Notification category: incoming direct message (SMS, instant message, etc.).
+     */
+    public static final String CATEGORY_MESSAGE = NotificationCompatApi21.CATEGORY_MESSAGE;
+
+    /**
+     * Notification category: asynchronous bulk message (email).
+     */
+    public static final String CATEGORY_EMAIL = NotificationCompatApi21.CATEGORY_EMAIL;
+
+    /**
+     * Notification category: calendar event.
+     */
+    public static final String CATEGORY_EVENT = NotificationCompatApi21.CATEGORY_EVENT;
+
+    /**
+     * Notification category: promotion or advertisement.
+     */
+    public static final String CATEGORY_PROMO = NotificationCompatApi21.CATEGORY_PROMO;
+
+    /**
+     * Notification category: alarm or timer.
+     */
+    public static final String CATEGORY_ALARM = NotificationCompatApi21.CATEGORY_ALARM;
+
+    /**
+     * Notification category: progress of a long-running background operation.
+     */
+    public static final String CATEGORY_PROGRESS = NotificationCompatApi21.CATEGORY_PROGRESS;
+
+    /**
+     * Notification category: social network or sharing update.
+     */
+    public static final String CATEGORY_SOCIAL = NotificationCompatApi21.CATEGORY_SOCIAL;
+
+    /**
+     * Notification category: error in background operation or authentication status.
+     */
+    public static final String CATEGORY_ERROR = NotificationCompatApi21.CATEGORY_ERROR;
+
+    /**
+     * Notification category: media transport control for playback.
+     */
+    public static final String CATEGORY_TRANSPORT = NotificationCompatApi21.CATEGORY_TRANSPORT;
+
+    /**
+     * Notification category: system or device status update.  Reserved for system use.
+     */
+    public static final String CATEGORY_SYSTEM = NotificationCompatApi21.CATEGORY_SYSTEM;
+
+    /**
+     * Notification category: indication of running background service.
+     */
+    public static final String CATEGORY_SERVICE = NotificationCompatApi21.CATEGORY_SERVICE;
+
+    /**
+     * Notification category: a specific, timely recommendation for a single thing.
+     * For example, a news app might want to recommend a news story it believes the user will
+     * want to read next.
+     */
+    public static final String CATEGORY_RECOMMENDATION =
+            NotificationCompatApi21.CATEGORY_RECOMMENDATION;
+
+    /**
+     * Notification category: ongoing information about device or contextual status.
+     */
+    public static final String CATEGORY_STATUS = NotificationCompatApi21.CATEGORY_STATUS;
+
     private static final NotificationCompatImpl IMPL;
 
     interface NotificationCompatImpl {
@@ -321,6 +448,7 @@ public class NotificationCompat {
         public Action getAction(Notification n, int actionIndex);
         public Action[] getActionsFromParcelableArrayList(ArrayList<Parcelable> parcelables);
         public ArrayList<Parcelable> getParcelableArrayListForActions(Action[] actions);
+        public String getCategory(Notification n);
         public boolean getLocalOnly(Notification n);
         public String getGroup(Notification n);
         public boolean isGroupSummary(Notification n);
@@ -363,6 +491,11 @@ public class NotificationCompat {
 
         @Override
         public ArrayList<Parcelable> getParcelableArrayListForActions(Action[] actions) {
+            return null;
+        }
+
+        @Override
+        public String getCategory(Notification n) {
             return null;
         }
 
@@ -492,9 +625,9 @@ public class NotificationCompat {
             NotificationCompatKitKat.Builder builder = new NotificationCompatKitKat.Builder(
                     b.mContext, b.mNotification, b.mContentTitle, b.mContentText, b.mContentInfo,
                     b.mTickerView, b.mNumber, b.mContentIntent, b.mFullScreenIntent, b.mLargeIcon,
-                    b.mProgressMax, b.mProgress, b.mProgressIndeterminate,
-                    b.mUseChronometer, b.mPriority, b.mSubText, b.mLocalOnly, b.mPeople, b.mExtras,
-                    b.mGroupKey, b.mGroupSummary, b.mSortKey);
+                    b.mProgressMax, b.mProgress, b.mProgressIndeterminate, b.mShowWhen,
+                    b.mUseChronometer, b.mPriority, b.mSubText, b.mLocalOnly,
+                    b.mPeople, b.mExtras, b.mGroupKey, b.mGroupSummary, b.mSortKey);
             addActionsToBuilder(builder, b.mActions);
             addStyleToBuilderJellybean(builder, b.mStyle);
             return builder.build();
@@ -543,9 +676,8 @@ public class NotificationCompat {
             NotificationCompatApi20.Builder builder = new NotificationCompatApi20.Builder(
                     b.mContext, b.mNotification, b.mContentTitle, b.mContentText, b.mContentInfo,
                     b.mTickerView, b.mNumber, b.mContentIntent, b.mFullScreenIntent, b.mLargeIcon,
-                    b.mProgressMax, b.mProgress, b.mProgressIndeterminate,
-                    b.mUseChronometer, b.mPriority, b.mSubText, b.mLocalOnly, b.mCategory,
-                    b.mPeople, b.mExtras, b.mColor, b.mVisibility, b.mPublicVersion,
+                    b.mProgressMax, b.mProgress, b.mProgressIndeterminate, b.mShowWhen,
+                    b.mUseChronometer, b.mPriority, b.mSubText, b.mLocalOnly, b.mPeople, b.mExtras,
                     b.mGroupKey, b.mGroupSummary, b.mSortKey);
             addActionsToBuilder(builder, b.mActions);
             addStyleToBuilderJellybean(builder, b.mStyle);
@@ -592,6 +724,27 @@ public class NotificationCompat {
         }
     }
 
+    static class NotificationCompatImplApi21 extends NotificationCompatImplApi20 {
+        @Override
+        public Notification build(Builder b) {
+            NotificationCompatApi21.Builder builder = new NotificationCompatApi21.Builder(
+                    b.mContext, b.mNotification, b.mContentTitle, b.mContentText, b.mContentInfo,
+                    b.mTickerView, b.mNumber, b.mContentIntent, b.mFullScreenIntent, b.mLargeIcon,
+                    b.mProgressMax, b.mProgress, b.mProgressIndeterminate, b.mShowWhen,
+                    b.mUseChronometer, b.mPriority, b.mSubText, b.mLocalOnly, b.mCategory,
+                    b.mPeople, b.mExtras, b.mColor, b.mVisibility, b.mPublicVersion,
+                    b.mGroupKey, b.mGroupSummary, b.mSortKey);
+            addActionsToBuilder(builder, b.mActions);
+            addStyleToBuilderJellybean(builder, b.mStyle);
+            return builder.build();
+        }
+
+        @Override
+        public String getCategory(Notification notif) {
+            return NotificationCompatApi21.getCategory(notif);
+        }
+    }
+
     private static void addActionsToBuilder(NotificationBuilderWithActions builder,
             ArrayList<Action> actions) {
         for (Action action : actions) {
@@ -630,8 +783,9 @@ public class NotificationCompat {
     }
 
     static {
-        // TODO: Replace this if clause when SDK_INT is incremented to 20.
-        if (Build.VERSION.RELEASE.equals("L")) {
+        if (Build.VERSION.SDK_INT >= 21) {
+            IMPL = new NotificationCompatImplApi21();
+        } else if (Build.VERSION.SDK_INT >= 20) {
             IMPL = new NotificationCompatImplApi20();
         } else if (Build.VERSION.SDK_INT >= 19) {
             IMPL = new NotificationCompatImplKitKat();
@@ -669,6 +823,14 @@ public class NotificationCompat {
      *
      */
     public static class Builder {
+        /**
+         * Maximum length of CharSequences accepted by Builder and friends.
+         *
+         * <p>
+         * Avoids spamming the system with overly large strings such as full e-mails.
+         */
+        private static final int MAX_CHARSEQUENCE_LENGTH = 5 * 1024;
+
         Context mContext;
 
         CharSequence mContentTitle;
@@ -680,6 +842,7 @@ public class NotificationCompat {
         CharSequence mContentInfo;
         int mNumber;
         int mPriority;
+        boolean mShowWhen = true;
         boolean mUseChronometer;
         Style mStyle;
         CharSequence mSubText;
@@ -731,6 +894,15 @@ public class NotificationCompat {
         }
 
         /**
+         * Control whether the timestamp set with {@link #setWhen(long) setWhen} is shown
+         * in the content view.
+         */
+        public Builder setShowWhen(boolean show) {
+            mShowWhen = show;
+            return this;
+        }
+
+        /**
          * Show the {@link Notification#when} field as a stopwatch.
          *
          * Instead of presenting <code>when</code> as a timestamp, the notification will show an
@@ -778,7 +950,7 @@ public class NotificationCompat {
          * Set the title (first row) of the notification, in a standard notification.
          */
         public Builder setContentTitle(CharSequence title) {
-            mContentTitle = title;
+            mContentTitle = limitCharSequenceLength(title);
             return this;
         }
 
@@ -786,7 +958,7 @@ public class NotificationCompat {
          * Set the text (second row) of the notification, in a standard notification.
          */
         public Builder setContentText(CharSequence text) {
-            mContentText = text;
+            mContentText = limitCharSequenceLength(text);
             return this;
         }
 
@@ -800,7 +972,7 @@ public class NotificationCompat {
          * <br>
          */
         public Builder setSubText(CharSequence text) {
-            mSubText = text;
+            mSubText = limitCharSequenceLength(text);
             return this;
         }
 
@@ -818,7 +990,7 @@ public class NotificationCompat {
          * Set the large text at the right-hand side of the notification.
          */
         public Builder setContentInfo(CharSequence info) {
-            mContentInfo = info;
+            mContentInfo = limitCharSequenceLength(info);
             return this;
         }
 
@@ -875,6 +1047,11 @@ public class NotificationCompat {
          * to turn it off and use a normal notification, as this can be extremely
          * disruptive.
          *
+         * <p>
+         * On some platforms, the system UI may choose to display a heads-up notification,
+         * instead of launching this intent, while the user is using the device.
+         * </p>
+         *
          * @param intent The pending intent to launch.
          * @param highPriority Passing true will cause this notification to be sent
          *          even if other notifications are suppressed.
@@ -890,7 +1067,7 @@ public class NotificationCompat {
          * arrives.
          */
         public Builder setTicker(CharSequence tickerText) {
-            mNotification.tickerText = tickerText;
+            mNotification.tickerText = limitCharSequenceLength(tickerText);
             return this;
         }
 
@@ -900,7 +1077,7 @@ public class NotificationCompat {
          * devices.
          */
         public Builder setTicker(CharSequence tickerText, RemoteViews views) {
-            mNotification.tickerText = tickerText;
+            mNotification.tickerText = limitCharSequenceLength(tickerText);
             mTickerView = views;
             return this;
         }
@@ -915,6 +1092,11 @@ public class NotificationCompat {
 
         /**
          * Set the sound to play.  It will play on the default stream.
+         *
+         * <p>
+         * On some platforms, a notification that is noisy is more likely to be presented
+         * as a heads-up notification.
+         * </p>
          */
         public Builder setSound(Uri sound) {
             mNotification.sound = sound;
@@ -924,6 +1106,11 @@ public class NotificationCompat {
 
         /**
          * Set the sound to play.  It will play on the stream you supply.
+         *
+         * <p>
+         * On some platforms, a notification that is noisy is more likely to be presented
+         * as a heads-up notification.
+         * </p>
          *
          * @see Notification#STREAM_DEFAULT
          * @see AudioManager for the <code>STREAM_</code> constants.
@@ -936,6 +1123,11 @@ public class NotificationCompat {
 
         /**
          * Set the vibration pattern to use.
+         *
+         * <p>
+         * On some platforms, a notification that vibrates is more likely to be presented
+         * as a heads-up notification.
+         * </p>
          *
          * @see android.os.Vibrator for a discussion of the <code>pattern</code>
          * parameter.
@@ -1070,10 +1262,27 @@ public class NotificationCompat {
         /**
          * Add a person that is relevant to this notification.
          *
+         * <P>
+         * Depending on user preferences, this annotation may allow the notification to pass
+         * through interruption filters, and to appear more prominently in the user interface.
+         * </P>
+         *
+         * <P>
+         * The person should be specified by the {@code String} representation of a
+         * {@link android.provider.ContactsContract.Contacts#CONTENT_LOOKUP_URI}.
+         * </P>
+         *
+         * <P>The system will also attempt to resolve {@code mailto:} and {@code tel:} schema
+         * URIs.  The path part of these URIs must exist in the contacts database, in the
+         * appropriate column, or the reference will be discarded as invalid. Telephone schema
+         * URIs will be resolved by {@link android.provider.ContactsContract.PhoneLookup}.
+         * </P>
+         *
+         * @param uri A URI for the person.
          * @see Notification#EXTRA_PEOPLE
          */
-        public Builder addPerson(String handle) {
-            mPeople.add(handle);
+        public Builder addPerson(String uri) {
+            mPeople.add(uri);
             return this;
         }
 
@@ -1293,6 +1502,14 @@ public class NotificationCompat {
         public Notification build() {
             return IMPL.build(this);
         }
+
+        protected static CharSequence limitCharSequenceLength(CharSequence cs) {
+            if (cs == null) return cs;
+            if (cs.length() > MAX_CHARSEQUENCE_LENGTH) {
+                cs = cs.subSequence(0, MAX_CHARSEQUENCE_LENGTH);
+            }
+            return cs;
+        }
     }
 
     /**
@@ -1334,7 +1551,7 @@ public class NotificationCompat {
      * <br>
      * This class is a "rebuilder": It attaches to a Builder object and modifies its behavior, like so:
      * <pre class="prettyprint">
-     * Notification noti = new Notification.Builder()
+     * Notification notif = new Notification.Builder(mContext)
      *     .setContentTitle(&quot;New photo from &quot; + sender.toString())
      *     .setContentText(subject)
      *     .setSmallIcon(R.drawable.new_post)
@@ -1363,7 +1580,7 @@ public class NotificationCompat {
          * This defaults to the value passed to setContentTitle().
          */
         public BigPictureStyle setBigContentTitle(CharSequence title) {
-            mBigContentTitle = title;
+            mBigContentTitle = Builder.limitCharSequenceLength(title);
             return this;
         }
 
@@ -1371,7 +1588,7 @@ public class NotificationCompat {
          * Set the first line of text after the detail section in the big form of the template.
          */
         public BigPictureStyle setSummaryText(CharSequence cs) {
-            mSummaryText = cs;
+            mSummaryText = Builder.limitCharSequenceLength(cs);
             mSummaryTextSet = true;
             return this;
         }
@@ -1403,7 +1620,7 @@ public class NotificationCompat {
      * <br>
      * This class is a "rebuilder": It attaches to a Builder object and modifies its behavior, like so:
      * <pre class="prettyprint">
-     * Notification noti = new Notification.Builder()
+     * Notification notif = new Notification.Builder(mContext)
      *     .setContentTitle(&quot;New mail from &quot; + sender.toString())
      *     .setContentText(subject)
      *     .setSmallIcon(R.drawable.new_mail)
@@ -1430,7 +1647,7 @@ public class NotificationCompat {
          * This defaults to the value passed to setContentTitle().
          */
         public BigTextStyle setBigContentTitle(CharSequence title) {
-            mBigContentTitle = title;
+            mBigContentTitle = Builder.limitCharSequenceLength(title);
             return this;
         }
 
@@ -1438,7 +1655,7 @@ public class NotificationCompat {
          * Set the first line of text after the detail section in the big form of the template.
          */
         public BigTextStyle setSummaryText(CharSequence cs) {
-            mSummaryText = cs;
+            mSummaryText = Builder.limitCharSequenceLength(cs);
             mSummaryTextSet = true;
             return this;
         }
@@ -1448,7 +1665,7 @@ public class NotificationCompat {
          * template in place of the content text.
          */
         public BigTextStyle bigText(CharSequence cs) {
-            mBigText = cs;
+            mBigText = Builder.limitCharSequenceLength(cs);
             return this;
         }
     }
@@ -1492,7 +1709,7 @@ public class NotificationCompat {
          * This defaults to the value passed to setContentTitle().
          */
         public InboxStyle setBigContentTitle(CharSequence title) {
-            mBigContentTitle = title;
+            mBigContentTitle = Builder.limitCharSequenceLength(title);
             return this;
         }
 
@@ -1500,7 +1717,7 @@ public class NotificationCompat {
          * Set the first line of text after the detail section in the big form of the template.
          */
         public InboxStyle setSummaryText(CharSequence cs) {
-            mSummaryText = cs;
+            mSummaryText = Builder.limitCharSequenceLength(cs);
             mSummaryTextSet = true;
             return this;
         }
@@ -1509,7 +1726,7 @@ public class NotificationCompat {
          * Append a line to the digest section of the Inbox notification.
          */
         public InboxStyle addLine(CharSequence cs) {
-            mTexts.add(cs);
+            mTexts.add(Builder.limitCharSequenceLength(cs));
             return this;
         }
     }
@@ -1548,7 +1765,7 @@ public class NotificationCompat {
         private Action(int icon, CharSequence title, PendingIntent intent, Bundle extras,
                 RemoteInput[] remoteInputs) {
             this.icon = icon;
-            this.title = title;
+            this.title = NotificationCompat.Builder.limitCharSequenceLength(title);
             this.actionIntent = intent;
             this.mExtras = extras != null ? extras : new Bundle();
             this.mRemoteInputs = remoteInputs;
@@ -1615,7 +1832,7 @@ public class NotificationCompat {
 
             private Builder(int icon, CharSequence title, PendingIntent intent, Bundle extras) {
                 mIcon = icon;
-                mTitle = title;
+                mTitle = NotificationCompat.Builder.limitCharSequenceLength(title);
                 mIntent = intent;
                 mExtras = extras;
             }
@@ -1711,7 +1928,11 @@ public class NotificationCompat {
             /** Notification action extra which contains wearable extensions */
             private static final String EXTRA_WEARABLE_EXTENSIONS = "android.wearable.EXTENSIONS";
 
+            // Keys within EXTRA_WEARABLE_EXTENSIONS for wearable options.
             private static final String KEY_FLAGS = "flags";
+            private static final String KEY_IN_PROGRESS_LABEL = "inProgressLabel";
+            private static final String KEY_CONFIRM_LABEL = "confirmLabel";
+            private static final String KEY_CANCEL_LABEL = "cancelLabel";
 
             // Flags bitwise-ored to mFlags
             private static final int FLAG_AVAILABLE_OFFLINE = 0x1;
@@ -1720,6 +1941,10 @@ public class NotificationCompat {
             private static final int DEFAULT_FLAGS = FLAG_AVAILABLE_OFFLINE;
 
             private int mFlags = DEFAULT_FLAGS;
+
+            private CharSequence mInProgressLabel;
+            private CharSequence mConfirmLabel;
+            private CharSequence mCancelLabel;
 
             /**
              * Create a {@link NotificationCompat.Action.WearableExtender} with default
@@ -1737,6 +1962,9 @@ public class NotificationCompat {
                 Bundle wearableBundle = action.getExtras().getBundle(EXTRA_WEARABLE_EXTENSIONS);
                 if (wearableBundle != null) {
                     mFlags = wearableBundle.getInt(KEY_FLAGS, DEFAULT_FLAGS);
+                    mInProgressLabel = wearableBundle.getCharSequence(KEY_IN_PROGRESS_LABEL);
+                    mConfirmLabel = wearableBundle.getCharSequence(KEY_CONFIRM_LABEL);
+                    mCancelLabel = wearableBundle.getCharSequence(KEY_CANCEL_LABEL);
                 }
             }
 
@@ -1752,6 +1980,15 @@ public class NotificationCompat {
                 if (mFlags != DEFAULT_FLAGS) {
                     wearableBundle.putInt(KEY_FLAGS, mFlags);
                 }
+                if (mInProgressLabel != null) {
+                    wearableBundle.putCharSequence(KEY_IN_PROGRESS_LABEL, mInProgressLabel);
+                }
+                if (mConfirmLabel != null) {
+                    wearableBundle.putCharSequence(KEY_CONFIRM_LABEL, mConfirmLabel);
+                }
+                if (mCancelLabel != null) {
+                    wearableBundle.putCharSequence(KEY_CANCEL_LABEL, mCancelLabel);
+                }
 
                 builder.getExtras().putBundle(EXTRA_WEARABLE_EXTENSIONS, wearableBundle);
                 return builder;
@@ -1761,6 +1998,9 @@ public class NotificationCompat {
             public WearableExtender clone() {
                 WearableExtender that = new WearableExtender();
                 that.mFlags = this.mFlags;
+                that.mInProgressLabel = this.mInProgressLabel;
+                that.mConfirmLabel = this.mConfirmLabel;
+                that.mCancelLabel = this.mCancelLabel;
                 return that;
             }
 
@@ -1791,6 +2031,72 @@ public class NotificationCompat {
                 } else {
                     mFlags &= ~mask;
                 }
+            }
+
+            /**
+             * Set a label to display while the wearable is preparing to automatically execute the
+             * action. This is usually a 'ing' verb ending in ellipsis like "Sending..."
+             *
+             * @param label the label to display while the action is being prepared to execute
+             * @return this object for method chaining
+             */
+            public WearableExtender setInProgressLabel(CharSequence label) {
+                mInProgressLabel = label;
+                return this;
+            }
+
+            /**
+             * Get the label to display while the wearable is preparing to automatically execute
+             * the action. This is usually a 'ing' verb ending in ellipsis like "Sending..."
+             *
+             * @return the label to display while the action is being prepared to execute
+             */
+            public CharSequence getInProgressLabel() {
+                return mInProgressLabel;
+            }
+
+            /**
+             * Set a label to display to confirm that the action should be executed.
+             * This is usually an imperative verb like "Send".
+             *
+             * @param label the label to confirm the action should be executed
+             * @return this object for method chaining
+             */
+            public WearableExtender setConfirmLabel(CharSequence label) {
+                mConfirmLabel = label;
+                return this;
+            }
+
+            /**
+             * Get the label to display to confirm that the action should be executed.
+             * This is usually an imperative verb like "Send".
+             *
+             * @return the label to confirm the action should be executed
+             */
+            public CharSequence getConfirmLabel() {
+                return mConfirmLabel;
+            }
+
+            /**
+             * Set a label to display to cancel the action.
+             * This is usually an imperative verb, like "Cancel".
+             *
+             * @param label the label to display to cancel the action
+             * @return this object for method chaining
+             */
+            public WearableExtender setCancelLabel(CharSequence label) {
+                mCancelLabel = label;
+                return this;
+            }
+
+            /**
+             * Get the label to display to cancel the action.
+             * This is usually an imperative verb like "Cancel".
+             *
+             * @return the label to display to cancel the action
+             */
+            public CharSequence getCancelLabel() {
+                return mCancelLabel;
             }
         }
 
@@ -1922,7 +2228,7 @@ public class NotificationCompat {
         /** Notification extra which contains wearable extensions */
         private static final String EXTRA_WEARABLE_EXTENSIONS = "android.wearable.EXTENSIONS";
 
-        // Keys within EXTRA_WEARABLE_OPTIONS for wearable options.
+        // Keys within EXTRA_WEARABLE_EXTENSIONS for wearable options.
         private static final String KEY_ACTIONS = "actions";
         private static final String KEY_FLAGS = "flags";
         private static final String KEY_DISPLAY_INTENT = "displayIntent";
@@ -2511,6 +2817,15 @@ public class NotificationCompat {
      */
     public static Action getAction(Notification notif, int actionIndex) {
         return IMPL.getAction(notif, actionIndex);
+    }
+
+    /**
+    * Get the category of this notification in a backwards compatible
+    * manner.
+    * @param notif The notification to inspect.
+    */
+    public static String getCategory(Notification notif) {
+        return IMPL.getCategory(notif);
     }
 
     /**

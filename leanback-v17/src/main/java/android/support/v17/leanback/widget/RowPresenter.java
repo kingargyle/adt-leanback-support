@@ -14,6 +14,7 @@
 package android.support.v17.leanback.widget;
 
 import android.support.v17.leanback.app.HeadersFragment;
+import android.support.v17.leanback.graphics.ColorOverlayDimmer;
 import android.view.View;
 import android.view.ViewGroup;
 
@@ -99,6 +100,7 @@ public abstract class RowPresenter extends Presenter {
         boolean mExpanded;
         boolean mInitialzed;
         float mSelectLevel = 0f; // initially unselected
+        protected final ColorOverlayDimmer mColorDimmer;
 
         /**
          * Constructor for ViewHolder.
@@ -107,6 +109,7 @@ public abstract class RowPresenter extends Presenter {
          */
         public ViewHolder(View view) {
             super(view);
+            mColorDimmer = ColorOverlayDimmer.createDefault(view.getContext());
         }
 
         /**
@@ -152,6 +155,8 @@ public abstract class RowPresenter extends Presenter {
     private RowHeaderPresenter mHeaderPresenter = new RowHeaderPresenter();
     private OnItemSelectedListener mOnItemSelectedListener;
     private OnItemClickedListener mOnItemClickedListener;
+    private OnItemViewSelectedListener mOnItemViewSelectedListener;
+    private OnItemViewClickedListener mOnItemViewClickedListener;
 
     boolean mSelectEffectEnabled = true;
 
@@ -266,8 +271,13 @@ public abstract class RowPresenter extends Presenter {
      * animation on the Row view.
      */
     protected void onRowViewSelected(ViewHolder vh, boolean selected) {
-        if (selected && mOnItemSelectedListener != null) {
-            mOnItemSelectedListener.onItemSelected(null, vh.getRow());
+        if (selected) {
+            if (mOnItemViewSelectedListener != null) {
+                mOnItemViewSelectedListener.onItemSelected(null, null, vh, vh.getRow());
+            }
+            if (mOnItemSelectedListener != null) {
+                mOnItemSelectedListener.onItemSelected(null, vh.getRow());
+            }
         }
         updateHeaderViewVisibility(vh);
     }
@@ -307,8 +317,15 @@ public abstract class RowPresenter extends Presenter {
      * the default dimming effect applied by the library.
      */
     protected void onSelectLevelChanged(ViewHolder vh) {
-        if (getSelectEffectEnabled() && vh.mHeaderViewHolder != null) {
-            mHeaderPresenter.setSelectLevel(vh.mHeaderViewHolder, vh.mSelectLevel);
+        if (getSelectEffectEnabled()) {
+            vh.mColorDimmer.setActiveLevel(vh.mSelectLevel);
+            if (vh.mHeaderViewHolder != null) {
+                mHeaderPresenter.setSelectLevel(vh.mHeaderViewHolder, vh.mSelectLevel);
+            }
+            if (isUsingDefaultSelectEffect()) {
+                ((RowContainerView) vh.mContainerViewHolder.view).setForegroundColor(
+                        vh.mColorDimmer.getPaint().getColor());
+            }
         }
     }
 
@@ -344,7 +361,7 @@ public abstract class RowPresenter extends Presenter {
     }
 
     final boolean needsRowContainerView() {
-        return mHeaderPresenter != null;
+        return mHeaderPresenter != null || needsDefaultSelectEffect();
     }
 
     /**
@@ -398,6 +415,7 @@ public abstract class RowPresenter extends Presenter {
         if (vh.mHeaderViewHolder != null) {
             mHeaderPresenter.onViewDetachedFromWindow(vh.mHeaderViewHolder);
         }
+        cancelAnimationsRecursive(vh.view);
     }
 
     /**
@@ -435,4 +453,45 @@ public abstract class RowPresenter extends Presenter {
     public final OnItemClickedListener getOnItemClickedListener() {
         return mOnItemClickedListener;
     }
+
+    /**
+     * Set listener for item or row selection.  RowPresenter fires row selection
+     * event with null item, subclass of RowPresenter e.g. {@link ListRowPresenter} can
+     * fire a selection event with selected item.
+     */
+    public final void setOnItemViewSelectedListener(OnItemViewSelectedListener listener) {
+        mOnItemViewSelectedListener = listener;
+    }
+
+    /**
+     * Get listener for item or row selection.
+     */
+    public final OnItemViewSelectedListener getOnItemViewSelectedListener() {
+        return mOnItemViewSelectedListener;
+    }
+
+    /**
+     * Set listener for item click event.  RowPresenter does nothing but subclass of
+     * RowPresenter may fire item click event if it does have a concept of item.
+     * OnItemViewClickedListener will override {@link View.OnClickListener} that
+     * item presenter sets during {@link Presenter#onCreateViewHolder(ViewGroup)}.
+     * So in general,  developer should choose one of the listeners but not both.
+     */
+    public final void setOnItemViewClickedListener(OnItemViewClickedListener listener) {
+        mOnItemViewClickedListener = listener;
+    }
+
+    /**
+     * Set listener for item click event.
+     */
+    public final OnItemViewClickedListener getOnItemViewClickedListener() {
+        return mOnItemViewClickedListener;
+    }
+
+    /**
+     * Freeze/Unfreeze the row, typically used when transition starts/ends.
+     */
+    public void freeze(ViewHolder holder, boolean freeze) {
+    }
+
 }

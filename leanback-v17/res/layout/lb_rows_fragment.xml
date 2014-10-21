@@ -21,4 +21,3 @@
     android:layout_height="match_parent"
     style="?attr/rowsVerticalGridStyle" />
 
-<!-- From: file:/usr/local/google/buildbot/repo_clients/https___googleplex-android.googlesource.com_a_platform_manifest.git/lmp-preview-release/frameworks/support/v17/leanback/res/layout/lb_rows_fragment.xml -->

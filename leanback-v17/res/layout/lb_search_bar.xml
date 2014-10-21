@@ -21,6 +21,8 @@
             android:layout_height="wrap_content"
             android:layout_centerVertical="true"
             android:layout_marginLeft="@dimen/lb_search_bar_speech_orb_margin_left"
+            android:focusable="true"
+            android:focusableInTouchMode="true"
             >
         <requestFocus/>
     </android.support.v17.leanback.widget.SpeechOrbView>
@@ -32,7 +34,8 @@
             android:layout_toRightOf="@+id/lb_search_bar_speech_orb"
             android:layout_centerVertical="true"
             android:layout_marginLeft="@dimen/lb_search_bar_items_margin_left"
-            android:orientation="horizontal"
+            android:layout_marginTop="@dimen/lb_search_bar_inner_margin_top"
+            android:layout_marginBottom="@dimen/lb_search_bar_inner_margin_bottom"
             android:background="@drawable/lb_in_app_search_bg"
             >
 
@@ -60,14 +63,14 @@
                     android:background="@null"
                     android:fontFamily="sans-serif"
                     android:focusable="true"
+                    android:focusableInTouchMode="true"
                     android:imeOptions="normal|flagNoExtractUi|actionSearch"
                     android:inputType="text|textAutoComplete"
                     android:singleLine="true"
-                    android:textColor="@color/lb_search_bar_text_color"
-                    android:textColorHint="@color/lb_search_bar_hint_color"
+                    android:textColor="@color/lb_search_bar_text"
+                    android:textColorHint="@color/lb_search_bar_hint"
                     android:textCursorDrawable="@null"
                     android:hint="@string/lb_search_bar_hint"
                     android:textSize="@dimen/lb_search_bar_text_size"/>
     </RelativeLayout>
 </merge>
-<!-- From: file:/usr/local/google/buildbot/repo_clients/https___googleplex-android.googlesource.com_a_platform_manifest.git/lmp-preview-release/frameworks/support/v17/leanback/res/layout/lb_search_bar.xml -->

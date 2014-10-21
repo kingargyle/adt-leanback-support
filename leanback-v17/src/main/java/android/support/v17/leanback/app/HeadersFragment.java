@@ -14,6 +14,10 @@
 
 package android.support.v17.leanback.app;
 
+import android.content.Context;
+import android.graphics.Color;
+import android.graphics.drawable.Drawable;
+import android.graphics.drawable.GradientDrawable;
 import android.os.Bundle;
 import android.support.v17.leanback.R;
 import android.support.v17.leanback.widget.FocusHighlightHelper;
@@ -59,6 +63,11 @@ public class HeadersFragment extends BaseRowFragment {
 
     public void setOnItemSelectedListener(OnItemSelectedListener listener) {
         mOnItemSelectedListener = listener;
+    }
+
+    @Override
+    protected VerticalGridView findGridViewFromRoot(View view) {
+        return (VerticalGridView) view.findViewById(R.id.browse_headers);
     }
 
     @Override
@@ -121,24 +130,47 @@ public class HeadersFragment extends BaseRowFragment {
         if (getBridgeAdapter() != null) {
             FocusHighlightHelper.setupHeaderItemFocusHighlight(listView);
         }
-        listView.setBackgroundColor(getBackgroundColor());
-        listView.setVisibility(mHeadersGone ? View.GONE : View.VISIBLE);
-        listView.setLayoutEnabled(mHeadersEnabled);
+        view.setBackgroundColor(getBackgroundColor());
+        updateFadingEdgeToBrandColor(getBackgroundColor());
+        updateListViewVisibility();
+    }
+
+    private void updateListViewVisibility() {
+        final VerticalGridView listView = getVerticalGridView();
+        if (listView != null) {
+            getView().setVisibility(mHeadersGone ? View.GONE : View.VISIBLE);
+            if (!mHeadersGone) {
+                if (mHeadersEnabled) {
+                    listView.setChildrenVisibility(View.VISIBLE);
+                } else {
+                    listView.setChildrenVisibility(View.INVISIBLE);
+                }
+            }
+        }
     }
 
     void setHeadersEnabled(boolean enabled) {
         mHeadersEnabled = enabled;
-        final VerticalGridView listView = getVerticalGridView();
-        if (listView != null) {
-            listView.setLayoutEnabled(mHeadersEnabled);
-        }
+        updateListViewVisibility();
     }
 
     void setHeadersGone(boolean gone) {
         mHeadersGone = gone;
-        final VerticalGridView listView = getVerticalGridView();
-        if (listView != null) {
-            listView.setVisibility(mHeadersGone ? View.GONE : View.VISIBLE);
+        updateListViewVisibility();
+    }
+
+    static class NoOverlappingFrameLayout extends FrameLayout {
+
+        public NoOverlappingFrameLayout(Context context) {
+            super(context);
+        }
+
+        /**
+         * Avoid creating hardware layer for header dock.
+         */
+        @Override
+        public boolean hasOverlappingRendering() {
+            return false;
         }
     }
 
@@ -152,7 +184,7 @@ public class HeadersFragment extends BaseRowFragment {
 
         @Override
         public View createWrapper(View root) {
-            return new FrameLayout(root.getContext());
+            return new NoOverlappingFrameLayout(root.getContext());
         }
     };
     @Override
@@ -172,8 +204,19 @@ public class HeadersFragment extends BaseRowFragment {
         mBackgroundColor = color;
         mBackgroundColorSet = true;
 
-        if (getVerticalGridView() != null) {
-            getVerticalGridView().setBackgroundColor(mBackgroundColor);
+        if (getView() != null) {
+            getView().setBackgroundColor(mBackgroundColor);
+            updateFadingEdgeToBrandColor(mBackgroundColor);
+        }
+    }
+
+    private void updateFadingEdgeToBrandColor(int backgroundColor) {
+        View fadingView = getView().findViewById(R.id.fade_out_edge);
+        Drawable background = fadingView.getBackground();
+        if (background instanceof GradientDrawable) {
+            background.mutate();
+            ((GradientDrawable) background).setColors(
+                    new int[] {Color.TRANSPARENT, backgroundColor});
         }
     }
 
@@ -189,5 +232,38 @@ public class HeadersFragment extends BaseRowFragment {
         TypedValue outValue = new TypedValue();
         getActivity().getTheme().resolveAttribute(R.attr.defaultBrandColor, outValue, true);
         return getResources().getColor(outValue.resourceId);
+    }
+
+    @Override
+    void onTransitionStart() {
+        super.onTransitionStart();
+        if (!mHeadersEnabled) {
+            // When enabling headers fragment,  the RowHeaderView gets a focus but
+            // isShown() is still false because its parent is INVSIBILE, accessibility
+            // event is not sent.
+            // Workaround is: prevent focus to a child view during transition and put
+            // focus on it after transition is done.
+            final VerticalGridView listView = getVerticalGridView();
+            if (listView != null) {
+                listView.setDescendantFocusability(ViewGroup.FOCUS_BEFORE_DESCENDANTS);
+                if (listView.hasFocus()) {
+                    listView.requestFocus();
+                }
+            }
+        }
+    }
+
+    @Override
+    void onTransitionEnd() {
+        if (mHeadersEnabled) {
+            final VerticalGridView listView = getVerticalGridView();
+            if (listView != null) {
+                listView.setDescendantFocusability(ViewGroup.FOCUS_AFTER_DESCENDANTS);
+                if (listView.hasFocus()) {
+                    listView.requestFocus();
+                }
+            }
+        }
+        super.onTransitionEnd();
     }
 }

@@ -28,4 +28,4 @@
         android:background="@drawable/lb_card_shadow_focused"
         android:alpha="0" />
 
-</merge><!-- From: file:/usr/local/google/buildbot/repo_clients/https___googleplex-android.googlesource.com_a_platform_manifest.git/lmp-preview-release/frameworks/support/v17/leanback/res/layout/lb_shadow.xml -->
+</merge>

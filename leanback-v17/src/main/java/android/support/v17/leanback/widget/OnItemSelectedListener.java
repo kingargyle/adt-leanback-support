@@ -15,6 +15,8 @@ package android.support.v17.leanback.widget;
 
 /**
  * Interface for receiving notification when a row or item becomes selected.
+ *
+ * @deprecated Use {@link OnItemViewSelectedListener}
  */
 public interface OnItemSelectedListener {
     /**

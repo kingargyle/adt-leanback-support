@@ -22,13 +22,23 @@
     android:paddingLeft="@dimen/lb_details_overview_margin_left"
     android:paddingRight="@dimen/lb_details_overview_margin_right"
     android:paddingBottom="@dimen/lb_details_overview_margin_bottom"
+    android:clipToPadding="false"
     >
+
+    <!--  Used for dimming -->
+    <FrameLayout
+        android:id="@+id/details_frame"
+        android:layout_width="match_parent"
+        android:layout_height="@dimen/lb_details_overview_height_large"
+        android:foreground="#ffffff"
+        android:elevation="@dimen/lb_details_overview_z"
+        >
 
     <!-- Background is applied to this inner layout -->
     <LinearLayout
         android:id="@+id/details_overview"
         android:layout_width="match_parent"
-        android:layout_height="@dimen/lb_details_overview_height_large"
+        android:layout_height="match_parent"
         android:orientation="horizontal"
          >
 
@@ -37,16 +47,17 @@
             android:layout_width="wrap_content"
             android:layout_height="match_parent"
             android:adjustViewBounds="true"
+            android:scaleType="fitStart"
             />
 
         <LinearLayout
+            android:id="@+id/details_overview_right_panel"
             android:layout_width="match_parent"
             android:layout_height="match_parent"
-            android:layout_marginBottom="@dimen/lb_details_overview_description_margin_bottom"
-            android:layout_marginTop="@dimen/lb_details_overview_description_margin_top"
+            android:paddingBottom="@dimen/lb_details_overview_description_margin_bottom"
             android:orientation="vertical" >
 
-        <FrameLayout
+        <android.support.v17.leanback.widget.NonOverlappingFrameLayout
             android:id="@+id/details_overview_description"
             android:layout_width="wrap_content"
             android:layout_height="0dp"
@@ -54,6 +65,9 @@
             android:gravity="top"
             android:layout_marginLeft="@dimen/lb_details_overview_description_margin_left"
             android:layout_marginRight="@dimen/lb_details_overview_description_margin_right"
+            android:paddingTop="@dimen/lb_details_overview_description_margin_top"
+            android:clipToPadding="false"
+            android:clipChildren="false"
             />
 
         <android.support.v17.leanback.widget.HorizontalGridView
@@ -72,6 +86,5 @@
 
         </LinearLayout>
     </LinearLayout>
-
+    </FrameLayout>
 </FrameLayout>
-<!-- From: file:/usr/local/google/buildbot/repo_clients/https___googleplex-android.googlesource.com_a_platform_manifest.git/lmp-preview-release/frameworks/support/v17/leanback/res/layout/lb_details_overview.xml -->

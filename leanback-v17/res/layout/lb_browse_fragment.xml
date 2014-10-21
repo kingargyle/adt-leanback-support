@@ -32,12 +32,16 @@
         <android.support.v17.leanback.app.BrowseRowsFrameLayout
             android:id="@+id/browse_container_dock"
             android:layout_width="match_parent"
-            android:layout_height="match_parent" />
+            android:layout_height="match_parent"
+            android:clipChildren="false" />
+
+        <!-- Padding needed for shadow -->
         <FrameLayout
             android:id="@+id/browse_headers_dock"
             android:layout_width="wrap_content"
-            android:layout_height="match_parent" />
+            android:layout_height="match_parent"
+            android:clipToPadding="false"
+            android:paddingEnd="50dp" />
         <include layout="@layout/lb_browse_title" />
     </android.support.v17.leanback.app.BrowseFrameLayout>
 </FrameLayout>
-<!-- From: file:/usr/local/google/buildbot/repo_clients/https___googleplex-android.googlesource.com_a_platform_manifest.git/lmp-preview-release/frameworks/support/v17/leanback/res/layout/lb_browse_fragment.xml -->

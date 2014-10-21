@@ -14,9 +14,15 @@
 package android.support.v17.leanback.app;
 
 import android.support.v17.leanback.R;
+import android.support.v17.leanback.transition.TransitionHelper;
+import android.support.v17.leanback.transition.TransitionListener;
 import android.support.v17.leanback.widget.HorizontalGridView;
+import android.support.v17.leanback.widget.ItemBridgeAdapter;
+import android.support.v17.leanback.widget.OnItemViewClickedListener;
+import android.support.v17.leanback.widget.OnItemViewSelectedListener;
 import android.support.v17.leanback.widget.Presenter;
 import android.support.v17.leanback.widget.PresenterSelector;
+import android.support.v17.leanback.widget.RowPresenter;
 import android.support.v17.leanback.widget.TitleView;
 import android.support.v17.leanback.widget.VerticalGridView;
 import android.support.v17.leanback.widget.Row;
@@ -29,6 +35,7 @@ import android.app.Activity;
 import android.app.Fragment;
 import android.app.FragmentManager;
 import android.app.FragmentManager.BackStackEntry;
+import android.content.Context;
 import android.content.res.TypedArray;
 import android.os.Bundle;
 import android.view.LayoutInflater;
@@ -61,6 +68,13 @@ import static android.support.v7.widget.RecyclerView.NO_POSITION;
  */
 public class BrowseFragment extends Fragment {
 
+    // BUNDLE attribute for saving header show/hide status when backstack is used:
+    static final String HEADER_STACK_INDEX = "headerStackIndex";
+    // BUNDLE attribute for saving header show/hide status when backstack is not used:
+    static final String HEADER_SHOW = "headerShow";
+    // BUNDLE attribute for title is showing
+    static final String TITLE_SHOW = "titleShow";
+
     final class BackStackListener implements FragmentManager.OnBackStackChangedListener {
         int mLastEntryCount;
         int mIndexOfHeadersBackStack;
@@ -69,6 +83,23 @@ public class BrowseFragment extends Fragment {
             mLastEntryCount = getFragmentManager().getBackStackEntryCount();
             mIndexOfHeadersBackStack = -1;
         }
+
+        void load(Bundle savedInstanceState) {
+            if (savedInstanceState != null) {
+                mIndexOfHeadersBackStack = savedInstanceState.getInt(HEADER_STACK_INDEX, -1);
+                mShowingHeaders = mIndexOfHeadersBackStack == -1;
+            } else {
+                if (!mShowingHeaders) {
+                    getFragmentManager().beginTransaction()
+                            .addToBackStack(mWithHeadersBackStackName).commit();
+                }
+            }
+        }
+
+        void save(Bundle outState) {
+            outState.putInt(HEADER_STACK_INDEX, mIndexOfHeadersBackStack);
+        }
+
 
         @Override
         public void onBackStackChanged() {
@@ -87,6 +118,7 @@ public class BrowseFragment extends Fragment {
             } else if (count < mLastEntryCount) {
                 // if popped "headers" backstack, initiate the show header transition if needed
                 if (mIndexOfHeadersBackStack >= count) {
+                    mIndexOfHeadersBackStack = -1;
                     if (!mShowingHeaders) {
                         startHeadersTransitionInternal(true);
                     }
@@ -155,11 +187,14 @@ public class BrowseFragment extends Fragment {
     private boolean mCanShowHeaders = true;
     private int mContainerListMarginLeft;
     private int mContainerListAlignTop;
-    private int mSearchAffordanceColor;
+    private boolean mRowScaleEnabled = true;
+    private SearchOrbView.Colors mSearchAffordanceColors;
     private boolean mSearchAffordanceColorSet;
     private OnItemSelectedListener mExternalOnItemSelectedListener;
     private OnClickListener mExternalOnSearchClickedListener;
     private OnItemClickedListener mOnItemClickedListener;
+    private OnItemViewSelectedListener mExternalOnItemViewSelectedListener;
+    private OnItemViewClickedListener mOnItemViewClickedListener;
     private int mSelectedPosition = -1;
 
     private PresenterSelector mHeaderPresenterSelector;
@@ -258,9 +293,24 @@ public class BrowseFragment extends Fragment {
      * item or row is selected by a user.
      *
      * @param listener The listener to call when an item or row is selected.
+     * @deprecated Use {@link #setOnItemViewSelectedListener(OnItemViewSelectedListener)}
      */
     public void setOnItemSelectedListener(OnItemSelectedListener listener) {
         mExternalOnItemSelectedListener = listener;
+    }
+
+    /**
+     * Sets an item selection listener.
+     */
+    public void setOnItemViewSelectedListener(OnItemViewSelectedListener listener) {
+        mExternalOnItemViewSelectedListener = listener;
+    }
+
+    /**
+     * Returns an item selection listener.
+     */
+    public OnItemViewSelectedListener getOnItemViewSelectedListener() {
+        return mExternalOnItemViewSelectedListener;
     }
 
     /**
@@ -273,6 +323,7 @@ public class BrowseFragment extends Fragment {
      * {@link View.OnClickListener} on your item views, but not both.
      *
      * @param listener The listener to call when an item is clicked.
+     * @deprecated Use {@link #setOnItemViewClickedListener(OnItemViewClickedListener)}
      */
     public void setOnItemClickedListener(OnItemClickedListener listener) {
         mOnItemClickedListener = listener;
@@ -283,9 +334,30 @@ public class BrowseFragment extends Fragment {
 
     /**
      * Returns the item clicked listener.
+     * @deprecated Use {@link #getOnItemViewClickedListener()}
      */
     public OnItemClickedListener getOnItemClickedListener() {
         return mOnItemClickedListener;
+    }
+
+    /**
+     * Sets an item clicked listener on the fragment.
+     * OnItemViewClickedListener will override {@link View.OnClickListener} that
+     * item presenter sets during {@link Presenter#onCreateViewHolder(ViewGroup)}.
+     * So in general,  developer should choose one of the listeners but not both.
+     */
+    public void setOnItemViewClickedListener(OnItemViewClickedListener listener) {
+        mOnItemViewClickedListener = listener;
+        if (mRowsFragment != null) {
+            mRowsFragment.setOnItemViewClickedListener(listener);
+        }
+    }
+
+    /**
+     * Returns the item Clicked listener.
+     */
+    public OnItemViewClickedListener getOnItemViewClickedListener() {
+        return mOnItemViewClickedListener;
     }
 
     /**
@@ -308,30 +380,44 @@ public class BrowseFragment extends Fragment {
     }
 
     /**
-     * Sets the color used to draw the search affordance.
-     *
-     * @param color The color to use for the search affordance.
+     * Sets the {@link SearchOrbView.Colors} used to draw the search affordance.
      */
-    public void setSearchAffordanceColor(int color) {
-        mSearchAffordanceColor = color;
+    public void setSearchAffordanceColors(SearchOrbView.Colors colors) {
+        mSearchAffordanceColors = colors;
         mSearchAffordanceColorSet = true;
         if (mTitleView != null) {
-            mTitleView.setSearchAffordanceColor(mSearchAffordanceColor);
+            mTitleView.setSearchAffordanceColors(mSearchAffordanceColors);
         }
     }
 
     /**
-     * Returns the color used to draw the search affordance.
-     * Can be called only after an activity has been attached.
+     * Returns the {@link SearchOrbView.Colors} used to draw the search affordance.
      */
-    public int getSearchAffordanceColor() {
+    public SearchOrbView.Colors getSearchAffordanceColors() {
         if (mSearchAffordanceColorSet) {
-            return mSearchAffordanceColor;
+            return mSearchAffordanceColors;
         }
         if (mTitleView == null) {
             throw new IllegalStateException("Fragment views not yet created");
         }
-        return mTitleView.getSearchAffordanceColor();
+        return mTitleView.getSearchAffordanceColors();
+    }
+
+    /**
+     * Sets the color used to draw the search affordance.
+     * A default brighter color will be set by the framework.
+     *
+     * @param color The color to use for the search affordance.
+     */
+    public void setSearchAffordanceColor(int color) {
+        setSearchAffordanceColors(new SearchOrbView.Colors(color));
+    }
+
+    /**
+     * Returns the color used to draw the search affordance.
+     */
+    public int getSearchAffordanceColor() {
+        return getSearchAffordanceColors().color;
     }
 
     /**
@@ -378,33 +464,49 @@ public class BrowseFragment extends Fragment {
         mBrowseTransitionListener = listener;
     }
 
-    private void startHeadersTransitionInternal(boolean withHeaders) {
+    /**
+     * Enables scaling of rows when headers are present.
+     * By default enabled to increase density.
+     *
+     * @param enable true to enable row scaling
+     */
+    public void enableRowScaling(boolean enable) {
+        mRowScaleEnabled = enable;
+        if (mRowsFragment != null) {
+            mRowsFragment.enableRowScaling(mRowScaleEnabled);
+        }
+    }
+
+    private void startHeadersTransitionInternal(final boolean withHeaders) {
         if (getFragmentManager().isDestroyed()) {
             return;
         }
         mShowingHeaders = withHeaders;
-        mRowsFragment.onTransitionStart();
-        mHeadersFragment.onTransitionStart();
-        createHeadersTransition();
-        if (mBrowseTransitionListener != null) {
-            mBrowseTransitionListener.onHeadersTransitionStart(withHeaders);
-        }
-        sTransitionHelper.runTransition(withHeaders ? mSceneWithHeaders : mSceneWithoutHeaders,
-                mHeadersTransition);
-        if (mHeadersBackStackEnabled) {
-            if (!withHeaders) {
-                getFragmentManager().beginTransaction()
-                        .addToBackStack(mWithHeadersBackStackName).commit();
-            } else {
-                int count = getFragmentManager().getBackStackEntryCount();
-                if (count > 0) {
-                    BackStackEntry entry = getFragmentManager().getBackStackEntryAt(count - 1);
-                    if (mWithHeadersBackStackName.equals(entry.getName())) {
-                        getFragmentManager().popBackStack();
+        mRowsFragment.onExpandTransitionStart(!withHeaders, new Runnable() {
+            @Override
+            public void run() {
+                mHeadersFragment.onTransitionStart();
+                createHeadersTransition();
+                if (mBrowseTransitionListener != null) {
+                    mBrowseTransitionListener.onHeadersTransitionStart(withHeaders);
+                }
+                sTransitionHelper.runTransition(withHeaders ? mSceneWithHeaders : mSceneWithoutHeaders,
+                        mHeadersTransition);
+                if (mHeadersBackStackEnabled) {
+                    if (!withHeaders) {
+                        getFragmentManager().beginTransaction()
+                                .addToBackStack(mWithHeadersBackStackName).commit();
+                    } else {
+                        int index = mBackStackChangedListener.mIndexOfHeadersBackStack;
+                        if (index >= 0) {
+                            BackStackEntry entry = getFragmentManager().getBackStackEntryAt(index);
+                            getFragmentManager().popBackStackImmediate(entry.getId(),
+                                    FragmentManager.POP_BACK_STACK_INCLUSIVE);
+                        }
                     }
                 }
             }
-        }
+        });
     }
 
     private boolean isVerticalScrolling() {
@@ -480,6 +582,16 @@ public class BrowseFragment extends Fragment {
     };
 
     @Override
+    public void onSaveInstanceState(Bundle outState) {
+        if (mBackStackChangedListener != null) {
+            mBackStackChangedListener.save(outState);
+        } else {
+            outState.putBoolean(HEADER_SHOW, mShowingHeaders);
+        }
+        outState.putBoolean(TITLE_SHOW, mShowingTitle);
+    }
+
+    @Override
     public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         TypedArray ta = getActivity().obtainStyledAttributes(R.styleable.LeanbackTheme);
@@ -495,16 +607,6 @@ public class BrowseFragment extends Fragment {
                 .getInteger(R.integer.lb_browse_headers_transition_duration);
 
         readArguments(getArguments());
-
-        if (mCanShowHeaders && mHeadersBackStackEnabled) {
-            mWithHeadersBackStackName = LB_HEADERS_BACKSTACK + this;
-            mBackStackChangedListener = new BackStackListener();
-            getFragmentManager().addOnBackStackChangedListener(mBackStackChangedListener);
-            if (!mShowingHeaders) {
-                getFragmentManager().beginTransaction()
-                        .addToBackStack(mWithHeadersBackStackName).commit();
-            }
-        }
 
     }
 
@@ -540,10 +642,13 @@ public class BrowseFragment extends Fragment {
         }
         mHeadersFragment.setAdapter(mAdapter);
 
+        mRowsFragment.enableRowScaling(mRowScaleEnabled);
         mRowsFragment.setOnItemSelectedListener(mRowSelectedListener);
+        mRowsFragment.setOnItemViewSelectedListener(mRowViewSelectedListener);
         mHeadersFragment.setOnItemSelectedListener(mHeaderSelectedListener);
         mHeadersFragment.setOnHeaderClickedListener(mHeaderClickedListener);
         mRowsFragment.setOnItemClickedListener(mOnItemClickedListener);
+        mRowsFragment.setOnItemViewClickedListener(mOnItemViewClickedListener);
 
         View root = inflater.inflate(R.layout.lb_browse_fragment, container, false);
 
@@ -555,7 +660,7 @@ public class BrowseFragment extends Fragment {
         mTitleView.setTitle(mTitle);
         mTitleView.setBadgeDrawable(mBadgeDrawable);
         if (mSearchAffordanceColorSet) {
-            mTitleView.setSearchAffordanceColor(mSearchAffordanceColor);
+            mTitleView.setSearchAffordanceColors(mSearchAffordanceColors);
         }
         if (mExternalOnSearchClickedListener != null) {
             mTitleView.setOnSearchClickedListener(mExternalOnSearchClickedListener);
@@ -568,13 +673,13 @@ public class BrowseFragment extends Fragment {
         mSceneWithTitle = sTransitionHelper.createScene(mBrowseFrame, new Runnable() {
             @Override
             public void run() {
-                TitleTransitionHelper.showTitle(mTitleView, true);
+                mTitleView.setVisibility(View.VISIBLE);
             }
         });
         mSceneWithoutTitle = sTransitionHelper.createScene(mBrowseFrame, new Runnable() {
             @Override
             public void run() {
-                TitleTransitionHelper.showTitle(mTitleView, false);
+                mTitleView.setVisibility(View.INVISIBLE);
             }
         });
         mSceneWithHeaders = sTransitionHelper.createScene(mBrowseFrame, new Runnable() {
@@ -597,6 +702,23 @@ public class BrowseFragment extends Fragment {
         sTransitionHelper.excludeChildren(mTitleUpTransition, R.id.container_list, true);
         sTransitionHelper.excludeChildren(mTitleDownTransition, R.id.container_list, true);
 
+        if (mCanShowHeaders) {
+            if (mHeadersBackStackEnabled) {
+                mWithHeadersBackStackName = LB_HEADERS_BACKSTACK + this;
+                mBackStackChangedListener = new BackStackListener();
+                getFragmentManager().addOnBackStackChangedListener(mBackStackChangedListener);
+                mBackStackChangedListener.load(savedInstanceState);
+            } else {
+                if (savedInstanceState != null) {
+                    mShowingHeaders = savedInstanceState.getBoolean(HEADER_SHOW);
+                }
+            }
+        }
+        if (savedInstanceState != null) {
+            mShowingTitle = savedInstanceState.getBoolean(TITLE_SHOW);
+        }
+        mTitleView.setVisibility(mShowingTitle ? View.VISIBLE: View.INVISIBLE);
+
         return root;
     }
 
@@ -606,14 +728,32 @@ public class BrowseFragment extends Fragment {
         Object changeBounds = sTransitionHelper.createChangeBounds(false);
         Object fadeIn = sTransitionHelper.createFadeTransition(TransitionHelper.FADE_IN);
         Object fadeOut = sTransitionHelper.createFadeTransition(TransitionHelper.FADE_OUT);
+        Object scale = sTransitionHelper.createScale();
+        if (TransitionHelper.systemSupportsTransitions()) {
+            Context context = getView().getContext();
+            sTransitionHelper.setInterpolator(changeBounds,
+                    sTransitionHelper.createDefaultInterpolator(context));
+            sTransitionHelper.setInterpolator(fadeIn,
+                    sTransitionHelper.createDefaultInterpolator(context));
+            sTransitionHelper.setInterpolator(fadeOut,
+                    sTransitionHelper.createDefaultInterpolator(context));
+            sTransitionHelper.setInterpolator(scale,
+                    sTransitionHelper.createDefaultInterpolator(context));
+        }
 
         sTransitionHelper.setDuration(fadeOut, mHeadersTransitionDuration);
         sTransitionHelper.addTransition(mHeadersTransition, fadeOut);
+
         if (mShowingHeaders) {
             sTransitionHelper.setStartDelay(changeBounds, mHeadersTransitionStartDelay);
+            sTransitionHelper.setStartDelay(scale, mHeadersTransitionStartDelay);
         }
         sTransitionHelper.setDuration(changeBounds, mHeadersTransitionDuration);
         sTransitionHelper.addTransition(mHeadersTransition, changeBounds);
+        sTransitionHelper.addTarget(scale, mRowsFragment.getVerticalGridView());
+        sTransitionHelper.setDuration(scale, mHeadersTransitionDuration);
+        sTransitionHelper.addTransition(mHeadersTransition, scale);
+
         sTransitionHelper.setDuration(fadeIn, mHeadersTransitionDuration);
         sTransitionHelper.setStartDelay(fadeIn, mHeadersTransitionStartDelay);
         sTransitionHelper.addTransition(mHeadersTransition, fadeIn);
@@ -689,12 +829,23 @@ public class BrowseFragment extends Fragment {
             }
         };
 
-    private OnItemSelectedListener mRowSelectedListener = new OnItemSelectedListener() {
+    private OnItemViewSelectedListener mRowViewSelectedListener = new OnItemViewSelectedListener() {
         @Override
-        public void onItemSelected(Object item, Row row) {
+        public void onItemSelected(Presenter.ViewHolder itemViewHolder, Object item,
+                RowPresenter.ViewHolder rowViewHolder, Row row) {
             int position = mRowsFragment.getVerticalGridView().getSelectedPosition();
             if (DEBUG) Log.v(TAG, "row selected position " + position);
             onRowSelected(position);
+            if (mExternalOnItemViewSelectedListener != null) {
+                mExternalOnItemViewSelectedListener.onItemSelected(itemViewHolder, item,
+                        rowViewHolder, row);
+            }
+        }
+    };
+
+    private OnItemSelectedListener mRowSelectedListener = new OnItemSelectedListener() {
+        @Override
+        public void onItemSelected(Object item, Row row) {
             if (mExternalOnItemSelectedListener != null) {
                 mExternalOnItemSelectedListener.onItemSelected(item, row);
             }
@@ -752,6 +903,9 @@ public class BrowseFragment extends Fragment {
         mHeadersFragment.setItemAlignment();
         mRowsFragment.setWindowAlignmentFromTop(mContainerListAlignTop);
         mRowsFragment.setItemAlignment();
+
+        mRowsFragment.getVerticalGridView().setPivotX(0);
+        mRowsFragment.getVerticalGridView().setPivotY(mContainerListAlignTop);
 
         if (mCanShowHeaders && mShowingHeaders && mHeadersFragment.getView() != null) {
             mHeadersFragment.getView().requestFocus();

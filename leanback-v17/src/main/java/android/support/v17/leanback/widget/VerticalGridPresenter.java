@@ -46,11 +46,14 @@ public class VerticalGridPresenter extends Presenter {
     private int mNumColumns = -1;
     private int mZoomFactor;
     private boolean mShadowEnabled = true;
-    private OnItemSelectedListener mOnItemSelectedListener;
     private OnItemClickedListener mOnItemClickedListener;
+    private OnItemSelectedListener mOnItemSelectedListener;
+    private OnItemViewSelectedListener mOnItemViewSelectedListener;
+    private OnItemViewClickedListener mOnItemViewClickedListener;
+    private boolean mRoundedCornersEnabled = true;
 
     public VerticalGridPresenter() {
-        this(FocusHighlight.ZOOM_FACTOR_MEDIUM);
+        this(FocusHighlight.ZOOM_FACTOR_LARGE);
     }
 
     public VerticalGridPresenter(int zoomFactor) {
@@ -103,6 +106,30 @@ public class VerticalGridPresenter extends Presenter {
         return ShadowOverlayContainer.supportsShadow();
     }
 
+    /**
+     * Enables or disabled rounded corners on children of this row.
+     * Supported on Android SDK >= L.
+     */
+    public final void enableChildRoundedCorners(boolean enable) {
+        mRoundedCornersEnabled = enable;
+    }
+
+    /**
+     * Returns true if rounded corners are enabled for children of this row.
+     */
+    public final boolean areChildRoundedCornersEnabled() {
+        return mRoundedCornersEnabled;
+    }
+
+    /**
+     * Returns true if SDK >= L, where Z shadow is enabled so that Z order is enabled
+     * on each child of vertical grid.   If subclass returns false in isUsingDefaultShadow()
+     * and does not use Z-shadow on SDK >= L, it should override isUsingZOrder() return false.
+     */
+    public boolean isUsingZOrder() {
+        return ShadowHelper.getInstance().usesZShadow();
+    }
+
     final boolean needsDefaultShadow() {
         return isUsingDefaultShadow() && getShadowEnabled();
     }
@@ -133,7 +160,7 @@ public class VerticalGridPresenter extends Presenter {
             ShadowOverlayContainer wrapper = new ShadowOverlayContainer(root.getContext());
             wrapper.setLayoutParams(
                     new LayoutParams(LayoutParams.WRAP_CONTENT, LayoutParams.WRAP_CONTENT));
-            wrapper.initialize(needsDefaultShadow(), false);
+            wrapper.initialize(needsDefaultShadow(), true, areChildRoundedCornersEnabled());
             return wrapper;
         }
         @Override
@@ -142,6 +169,13 @@ public class VerticalGridPresenter extends Presenter {
         }
     };
 
+    /**
+     * Called after a {@link VerticalGridPresenter.ViewHolder} is created.
+     * Subclasses may override this method and start by calling
+     * super.initializeGridViewHolder(ViewHolder).
+     *
+     * @param vh The ViewHolder to initialize for the vertical grid.
+     */
     protected void initializeGridViewHolder(ViewHolder vh) {
         if (mNumColumns == -1) {
             throw new IllegalStateException("Number of columns must be set");
@@ -150,12 +184,14 @@ public class VerticalGridPresenter extends Presenter {
         vh.getGridView().setNumColumns(mNumColumns);
         vh.mInitialized = true;
 
-        if (needsDefaultShadow()) {
-            vh.mItemBridgeAdapter.setWrapper(mWrapper);
+        vh.mItemBridgeAdapter.setWrapper(mWrapper);
+        if (needsDefaultShadow() || areChildRoundedCornersEnabled()) {
             ShadowOverlayContainer.prepareParentForShadow(vh.getGridView());
             ((ViewGroup) vh.view).setClipChildren(false);
         }
-        FocusHighlightHelper.setupBrowseItemFocusHighlight(vh.mItemBridgeAdapter, mZoomFactor);
+        vh.getGridView().setFocusDrawingOrderEnabled(!isUsingZOrder());
+        FocusHighlightHelper.setupBrowseItemFocusHighlight(vh.mItemBridgeAdapter,
+                mZoomFactor, true);
 
         final ViewHolder gridViewHolder = vh;
         vh.getGridView().setOnChildSelectedListener(new OnChildSelectedListener() {
@@ -167,19 +203,32 @@ public class VerticalGridPresenter extends Presenter {
 
         vh.mItemBridgeAdapter.setAdapterListener(new ItemBridgeAdapter.AdapterListener() {
             @Override
-            public void onCreate(final ItemBridgeAdapter.ViewHolder itemViewHolder) {
+            public void onBind(final ItemBridgeAdapter.ViewHolder itemViewHolder) {
                 // Only when having an OnItemClickListner, we attach the OnClickListener.
-                if (getOnItemClickedListener() != null) {
-                    final View itemView = itemViewHolder.getViewHolder().view;
+                if (getOnItemClickedListener() != null || getOnItemViewClickedListener() != null) {
+                    final View itemView = itemViewHolder.mHolder.view;
                     itemView.setOnClickListener(new View.OnClickListener() {
                         @Override
                         public void onClick(View view) {
                             if (getOnItemClickedListener() != null) {
                                 // Row is always null
-                                getOnItemClickedListener().onItemClicked(itemViewHolder.mItem, null);
+                                getOnItemClickedListener().onItemClicked(itemViewHolder.mItem,
+                                        null);
+                            }
+                            if (getOnItemViewClickedListener() != null) {
+                                // Row is always null
+                                getOnItemViewClickedListener().onItemClicked(
+                                        itemViewHolder.mHolder, itemViewHolder.mItem, null, null);
                             }
                         }
                     });
+                }
+            }
+
+            @Override
+            public void onUnbind(ItemBridgeAdapter.ViewHolder viewHolder) {
+                if (getOnItemClickedListener() != null || getOnItemViewClickedListener() != null) {
+                    viewHolder.mHolder.view.setOnClickListener(null);
                 }
             }
 
@@ -209,6 +258,7 @@ public class VerticalGridPresenter extends Presenter {
     /**
      * Sets the item selected listener.
      * Since this is a grid the row parameter is always null.
+     * @deprecated Use {@link #setOnItemViewSelectedListener(OnItemViewSelectedListener)}
      */
     public final void setOnItemSelectedListener(OnItemSelectedListener listener) {
         mOnItemSelectedListener = listener;
@@ -216,9 +266,25 @@ public class VerticalGridPresenter extends Presenter {
 
     /**
      * Returns the item selected listener.
+     * @deprecated Use {@link #getOnItemViewSelectedListener()}
      */
     public final OnItemSelectedListener getOnItemSelectedListener() {
         return mOnItemSelectedListener;
+    }
+
+    /**
+     * Sets the item selected listener.
+     * Since this is a grid the row parameter is always null.
+     */
+    public final void setOnItemViewSelectedListener(OnItemViewSelectedListener listener) {
+        mOnItemViewSelectedListener = listener;
+    }
+
+    /**
+     * Returns the item selected listener.
+     */
+    public final OnItemViewSelectedListener getOnItemViewSelectedListener() {
+        return mOnItemViewSelectedListener;
     }
 
     /**
@@ -226,24 +292,55 @@ public class VerticalGridPresenter extends Presenter {
      * OnItemClickedListener will override {@link View.OnClickListener} that
      * item presenter sets during {@link Presenter#onCreateViewHolder(ViewGroup)}.
      * So in general, developer should choose one of the listeners but not both.
+     * @deprecated Use {@link #setOnItemViewClickedListener(OnItemViewClickedListener)}
      */
     public final void setOnItemClickedListener(OnItemClickedListener listener) {
         mOnItemClickedListener = listener;
     }
 
     /**
+     * Sets the item clicked listener.
+     * OnItemViewClickedListener will override {@link View.OnClickListener} that
+     * item presenter sets during {@link Presenter#onCreateViewHolder(ViewGroup)}.
+     * So in general, developer should choose one of the listeners but not both.
+     */
+    public final void setOnItemViewClickedListener(OnItemViewClickedListener listener) {
+        mOnItemViewClickedListener = listener;
+    }
+
+    /**
      * Returns the item clicked listener.
+     * @deprecated Use {@link #getOnItemViewClickedListener()}
      */
     public final OnItemClickedListener getOnItemClickedListener() {
         return mOnItemClickedListener;
     }
 
+    /**
+     * Returns the item clicked listener.
+     */
+    public final OnItemViewClickedListener getOnItemViewClickedListener() {
+        return mOnItemViewClickedListener;
+    }
+
     private void selectChildView(ViewHolder vh, View view) {
         if (getOnItemSelectedListener() != null) {
             ItemBridgeAdapter.ViewHolder ibh = (view == null) ? null :
-                (ItemBridgeAdapter.ViewHolder) vh.getGridView().getChildViewHolder(view);
-
-            getOnItemSelectedListener().onItemSelected(ibh == null ? null : ibh.mItem, null);
+                    (ItemBridgeAdapter.ViewHolder) vh.getGridView().getChildViewHolder(view);
+            if (ibh == null) {
+                getOnItemSelectedListener().onItemSelected(null, null);
+            } else {
+                getOnItemSelectedListener().onItemSelected(ibh.mItem, null);
+            }
         }
-    };
+        if (getOnItemViewSelectedListener() != null) {
+            ItemBridgeAdapter.ViewHolder ibh = (view == null) ? null :
+                    (ItemBridgeAdapter.ViewHolder) vh.getGridView().getChildViewHolder(view);
+            if (ibh == null) {
+                getOnItemViewSelectedListener().onItemSelected(null, null, null, null);
+            } else {
+                getOnItemViewSelectedListener().onItemSelected(ibh.mHolder, ibh.mItem, null, null);
+            }
+        }
+    }
 }

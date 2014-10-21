@@ -17,11 +17,8 @@ import android.view.View;
 
 /**
  * Interface for receiving notification when a item is clicked.
- * <p>
- * Alternatively {@link Presenter} can attach its own {@link View.OnClickListener} in
- * {@link Presenter#onCreateViewHolder(android.view.ViewGroup)}; but developer should never
- * use these two listeners together.
- * </p>
+ *
+ * @deprecated Uses {@link OnItemViewClickedListener}
  */
 public interface OnItemClickedListener {
 

@@ -33,4 +33,3 @@ limitations under the License.
             android:clipChildren="false"
             />
 </FrameLayout>
-<!-- From: file:/usr/local/google/buildbot/repo_clients/https___googleplex-android.googlesource.com_a_platform_manifest.git/lmp-preview-release/frameworks/support/v17/leanback/res/layout/lb_search_fragment.xml -->

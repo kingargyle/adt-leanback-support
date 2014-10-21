@@ -1,10 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources xmlns:ns1="urn:oasis:names:tc:xliff:document:1.2">
 
-    <!-- From: file:/usr/local/google/buildbot/repo_clients/https___googleplex-android.googlesource.com_a_platform_manifest.git/lmp-preview-release/frameworks/support/v17/leanback/res/values/colors.xml -->
-    <eat-comment />
-
-    <color name="lb_action_bg_color">#3D3D3D</color>
     <color name="lb_action_text_color">#EEEEEE</color>
     <color name="lb_background_protection">#99000000</color>
     <color name="lb_basic_card_bg_color">#FF3B3B3B</color>
@@ -13,20 +9,35 @@
     <color name="lb_basic_card_title_text_color">#FFEEEEEE</color>
     <color name="lb_browse_header_color">#FFFFFF</color>
     <color name="lb_browse_title_color">#EEEEEE</color>
+    <color name="lb_control_button_color">#66EEEEEE</color>
     <color name="lb_default_brand_color">#FF455A64</color>
     <color name="lb_default_search_color">#FFFFAA3F</color>
+    <color name="lb_details_description_body_color">#B2EEEEEE</color>
     <color name="lb_details_description_color">#EEEEEE</color>
     <color name="lb_details_overview_bg_color">#1B1B1B</color>
+    <color name="lb_error_background_color_opaque">#262626</color>
+    <color name="lb_error_background_color_translucent">#E6000000</color>
+    <color name="lb_error_message_color_on_opaque">#80EEEEEE</color>
+    <color name="lb_error_message_color_on_translucent">#80555555</color>
     <color name="lb_grey">#888888</color>
     <color name="lb_list_item_unselected_text_color">#FFF1F1F1</color>
-    <color name="lb_search_bar_hint_color">#66222222</color>
-    <color name="lb_search_bar_text_color">#FFEEEEEE</color>
-    <color name="lb_search_bar_text_speech_color">#FF444444</color>
-    <color name="lb_speech_orb_not_recording">#33EEEEEE</color>
-    <color name="lb_speech_orb_recording">#33EE0000</color>
+    <color name="lb_playback_background_progress_color">#19FFFFFF</color>
+    <color name="lb_playback_controls_background_dark">#c0000000</color>
+    <color name="lb_playback_controls_background_light">#80000000</color>
+    <color name="lb_playback_controls_time_text_color">#B2EEEEEE</color>
+    <color name="lb_playback_icon_highlight_no_theme">#ff40c4ff</color>
+    <color name="lb_playback_progress_color_no_theme">#ff40c4ff</color>
+    <color name="lb_playback_secondary_progress_color">#33FFFFFF</color>
+    <color name="lb_search_bar_hint">#FF888888</color>
+    <color name="lb_search_bar_hint_speech_mode">#66222222</color>
+    <color name="lb_search_bar_text">#FFEEEEEE</color>
+    <color name="lb_search_bar_text_speech_mode">#FF444444</color>
+    <color name="lb_search_plate_hint_text_color">#FFCCCCCC</color>
+    <color name="lb_speech_orb_not_recording">#CCCCCC</color>
+    <color name="lb_speech_orb_not_recording_icon">#555555</color>
+    <color name="lb_speech_orb_not_recording_pulsed">#EEEEEE</color>
+    <color name="lb_speech_orb_recording">#ff4343</color>
     <color name="lb_view_dim_mask_color">#000000</color>
-    <!-- From: file:/usr/local/google/buildbot/repo_clients/https___googleplex-android.googlesource.com_a_platform_manifest.git/lmp-preview-release/frameworks/support/v17/leanback/res/values/attrs.xml -->
-    <eat-comment />
 
     <declare-styleable name="LeanbackTheme">
 
@@ -82,11 +93,25 @@
         <attr name="detailsDescriptionBodyStyle" format="reference" />
         <attr name="detailsActionButtonStyle" format="reference" />
 
+        <!-- for playback controls -->
+        <attr name="playbackControlsButtonStyle" format="reference" />
+        <attr name="playbackControlsTimeStyle" format="reference" />
+
         <!-- style for a vertical grid of items -->
         <attr name="itemsVerticalGridStyle" format="reference" />
 
-        <!-- Default colors -->
+        <!-- for messages in the error fragment -->
+        <attr name="errorMessageStyle" format="reference" />
+
+        <!--
+             Default brand color used for the background of certain leanback visual elements
+             such as the headers fragment. If your app runs on:
+             a) SDK 21+: set colorPrimary, used by the leanback launcher and elsewhere, and defaultBrandColor will inherit it.
+             b) SDK < 21: set the brand color explicitly via defaultBrandColor, or programatically.
+        -->
         <attr name="defaultBrandColor" format="reference|color" />
+
+        <!-- Default colors -->
         <attr name="defaultSearchColor" format="reference|color" />
         <!-- Default color that search orb pulses to.  If not set, this color is determined programatically based on the defaultSearchColor -->
         <attr name="defaultSearchBrightColor" format="reference|color" />
@@ -94,6 +119,16 @@
         <!-- Style for searchOrb -->
         <attr name="searchOrbViewStyle" format="reference" />
         <attr name="defaultSearchIcon" format="reference" />
+        <attr name="playbackProgressPrimaryColor" format="reference|color" />
+        <attr name="playbackControlsIconHighlightColor" format="reference|color" />
+        <attr name="playbackControlsActionIcons" format="reference" />
+
+        <!-- Default color for dimmed views. -->
+        <attr name="overlayDimMaskColor" format="color" />
+        <!-- Default level of dimming for active views. -->
+        <attr name="overlayDimActiveLevel" format="fraction" />
+        <!-- Default level of dimming for dimmed views. -->
+        <attr name="overlayDimDimmedLevel" format="fraction" />
     </declare-styleable>
     <declare-styleable name="lbBaseCardView">
 
@@ -204,19 +239,36 @@
         <!-- Defining number of rows -->
         <attr name="numberOfRows" format="integer" />
     </declare-styleable>
+    <declare-styleable name="lbImageCardView">
+        <attr name="infoAreaBackground" format="reference|color" />
+    </declare-styleable>
+    <declare-styleable name="lbPlaybackControlsActionIcons">
+        <attr name="play" format="reference" />
+        <attr name="pause" format="reference" />
+        <attr name="fast_forward" format="reference" />
+        <attr name="rewind" format="reference" />
+        <attr name="skip_next" format="reference" />
+        <attr name="skip_previous" format="reference" />
+        <attr name="thumb_up_outline" format="reference" />
+        <attr name="thumb_up" format="reference" />
+        <attr name="thumb_down_outline" format="reference" />
+        <attr name="thumb_down" format="reference" />
+        <attr name="repeat" format="reference" />
+        <attr name="repeat_one" format="reference" />
+        <attr name="shuffle" format="reference" />
+        <attr name="high_quality" format="reference" />
+        <attr name="closed_captioning" format="reference" />
+    </declare-styleable>
     <declare-styleable name="lbSearchOrbView">
 
         <!-- Defining icon of the search affordance -->
         <attr name="searchOrbIcon" format="reference" />
+        <!-- Defining icon tint color of the search affordance -->
+        <attr name="searchOrbIconColor" format="reference|color" />
         <!-- Defining color of the search affordance -->
         <attr name="searchOrbColor" format="reference|color" />
         <!-- Defining pulse color of the search affordance -->
         <attr name="searchOrbBrightColor" format="reference|color" />
-    </declare-styleable>
-    <declare-styleable name="lbTitleView">
-
-        <!-- Defining color of the search affordance -->
-        <attr name="searchAffordanceColor" format="reference|color" />
     </declare-styleable>
     <declare-styleable name="lbVerticalGridView">
 
@@ -227,13 +279,12 @@
         <!-- Defining number of columns -->
         <attr name="numberOfColumns" format="integer" />
     </declare-styleable>
-    <!-- From: file:/usr/local/google/buildbot/repo_clients/https___googleplex-android.googlesource.com_a_platform_manifest.git/lmp-preview-release/frameworks/support/v17/leanback/res/values/dimens.xml -->
-    <eat-comment />
 
     <dimen name="lb_action_1_line_height">36dp</dimen>
     <dimen name="lb_action_2_lines_height">56dp</dimen>
+    <dimen name="lb_action_button_corner_radius">2dp</dimen>
     <dimen name="lb_action_icon_margin">12dp</dimen>
-    <dimen name="lb_action_padding_horizontal">34dp</dimen>
+    <dimen name="lb_action_padding_horizontal">24dp</dimen>
     <dimen name="lb_action_text_size">16sp</dimen>
     <dimen name="lb_action_with_icon_padding_left">14dp</dimen>
     <dimen name="lb_action_with_icon_padding_right">20dp</dimen>
@@ -247,8 +298,9 @@
     <dimen name="lb_basic_card_title_text_size">16sp</dimen>
     <dimen name="lb_browse_expanded_row_no_hovercard_bottom_padding">28dp</dimen>
     <dimen name="lb_browse_expanded_selected_row_top_padding">16dp</dimen>
+    <dimen name="lb_browse_header_fading_length">12dp</dimen>
     <dimen name="lb_browse_header_height">24dp</dimen>
-    <dimen name="lb_browse_header_padding_right">24dp</dimen>
+    <dimen name="lb_browse_header_padding_right">8dp</dimen>
 
     <item name="lb_browse_header_select_duration" format="integer" type="dimen">150</item>
     <item name="lb_browse_header_select_scale" format="float" type="dimen">1.2</item>
@@ -256,6 +308,7 @@
     <dimen name="lb_browse_header_text_size">20sp</dimen>
     <dimen name="lb_browse_headers_vertical_margin">21dp</dimen>
     <dimen name="lb_browse_headers_width">270dp</dimen>
+    <dimen name="lb_browse_headers_z">@dimen/lb_material_shadow_focused_z</dimen>
     <dimen name="lb_browse_item_horizontal_margin">8dp</dimen>
     <dimen name="lb_browse_item_vertical_margin">8dp</dimen>
     <dimen name="lb_browse_padding_bottom">48dp</dimen>
@@ -275,6 +328,12 @@
     <dimen name="lb_browse_title_icon_width">52dp</dimen>
     <dimen name="lb_browse_title_text_size">44sp</dimen>
     <dimen name="lb_browse_title_text_width">584dp</dimen>
+    <dimen name="lb_control_button_diameter">90dp</dimen>
+    <dimen name="lb_control_button_height">64dp</dimen>
+    <dimen name="lb_control_button_secondary_diameter">48dp</dimen>
+    <dimen name="lb_control_button_secondary_height">48dp</dimen>
+    <dimen name="lb_control_icon_height">32dp</dimen>
+    <dimen name="lb_control_icon_width">32dp</dimen>
     <dimen name="lb_details_description_body_line_spacing">20dp</dimen>
     <dimen name="lb_details_description_body_text_size">14sp</dimen>
     <dimen name="lb_details_description_subtitle_text_size">16sp</dimen>
@@ -283,7 +342,7 @@
     <dimen name="lb_details_description_title_text_size">34sp</dimen>
     <dimen name="lb_details_description_under_subtitle_baseline_margin">32dp</dimen>
     <dimen name="lb_details_description_under_title_baseline_margin">32dp</dimen>
-    <dimen name="lb_details_overview_action_items_margin">0dp</dimen>
+    <dimen name="lb_details_overview_action_items_margin">16dp</dimen>
 
     <item name="lb_details_overview_action_select_duration" format="integer" type="dimen">150</item>
 
@@ -297,22 +356,53 @@
     <dimen name="lb_details_overview_description_margin_top">24dp</dimen>
     <dimen name="lb_details_overview_height_large">274dp</dimen>
     <dimen name="lb_details_overview_height_small">159dp</dimen>
+    <dimen name="lb_details_overview_image_margin_horizontal">24dp</dimen>
+    <dimen name="lb_details_overview_image_margin_vertical">24dp</dimen>
     <dimen name="lb_details_overview_margin_bottom">40dp</dimen>
     <dimen name="lb_details_overview_margin_left">132dp</dimen>
     <dimen name="lb_details_overview_margin_right">132dp</dimen>
+    <dimen name="lb_details_overview_z">@dimen/lb_material_shadow_details_z</dimen>
     <dimen name="lb_details_rows_align_top">167dp</dimen>
+    <dimen name="lb_error_image_max_height">120dp</dimen>
+    <dimen name="lb_error_message_max_width">600dp</dimen>
+    <dimen name="lb_error_message_text_size">16sp</dimen>
+    <dimen name="lb_error_under_image_baseline_margin">36dp</dimen>
+    <dimen name="lb_error_under_message_baseline_margin">24dp</dimen>
     <dimen name="lb_list_row_height">224dp</dimen>
-    <dimen name="lb_material_shadow_focused_z">8dp</dimen>
-    <dimen name="lb_material_shadow_normal_z">2dp</dimen>
+    <dimen name="lb_material_shadow_details_z">8dp</dimen>
+    <dimen name="lb_material_shadow_focused_z">16dp</dimen>
+    <dimen name="lb_material_shadow_normal_z">6dp</dimen>
+    <dimen name="lb_playback_controls_align_bottom">58dp</dimen>
+    <dimen name="lb_playback_controls_card_height">176dp</dimen>
+    <dimen name="lb_playback_controls_child_margin_bigger">64dp</dimen>
+    <dimen name="lb_playback_controls_child_margin_biggest">88dp</dimen>
+    <dimen name="lb_playback_controls_child_margin_default">48dp</dimen>
+    <dimen name="lb_playback_controls_margin_bottom">20dp</dimen>
+    <dimen name="lb_playback_controls_margin_left">132dp</dimen>
+    <dimen name="lb_playback_controls_margin_right">132dp</dimen>
+    <dimen name="lb_playback_controls_padding_bottom">28dp</dimen>
+    <dimen name="lb_playback_controls_time_text_size">12sp</dimen>
+    <dimen name="lb_playback_controls_z">@dimen/lb_material_shadow_details_z</dimen>
+    <dimen name="lb_playback_current_time_margin_start">16dp</dimen>
+    <dimen name="lb_playback_description_margin_end">24dp</dimen>
+    <dimen name="lb_playback_description_margin_start">24dp</dimen>
+    <dimen name="lb_playback_description_margin_top">24dp</dimen>
+    <dimen name="lb_playback_major_fade_translate_y">200dp</dimen>
+    <dimen name="lb_playback_minor_fade_translate_y">16dp</dimen>
+    <dimen name="lb_playback_time_padding_top">8dp</dimen>
+    <dimen name="lb_playback_total_time_margin_end">16dp</dimen>
+    <dimen name="lb_rounded_rect_corner_radius">2dp</dimen>
     <dimen name="lb_search_bar_edit_text_margin_left">24dp</dimen>
     <dimen name="lb_search_bar_height">60dp</dimen>
     <dimen name="lb_search_bar_hint_margin_left">52dp</dimen>
     <dimen name="lb_search_bar_icon_height">32dp</dimen>
     <dimen name="lb_search_bar_icon_margin_left">16dp</dimen>
     <dimen name="lb_search_bar_icon_width">32dp</dimen>
+    <dimen name="lb_search_bar_inner_margin_bottom">2dp</dimen>
+    <dimen name="lb_search_bar_inner_margin_top">2dp</dimen>
     <dimen name="lb_search_bar_items_height">56dp</dimen>
     <dimen name="lb_search_bar_items_layout_margin_top">27dp</dimen>
-    <dimen name="lb_search_bar_items_margin_left">56dp</dimen>
+    <dimen name="lb_search_bar_items_margin_left">70dp</dimen>
     <dimen name="lb_search_bar_items_width">600dp</dimen>
     <dimen name="lb_search_bar_padding_left">56dp</dimen>
     <dimen name="lb_search_bar_padding_top">27dp</dimen>
@@ -322,72 +412,93 @@
     <dimen name="lb_search_bar_unfocused_text_size">18sp</dimen>
     <dimen name="lb_search_browse_row_padding_left">56dp</dimen>
     <dimen name="lb_search_browse_rows_align_top">120dp</dimen>
+    <dimen name="lb_search_orb_focused_z">8dp</dimen>
     <dimen name="lb_search_orb_margin_bottom">4dp</dimen>
     <dimen name="lb_search_orb_margin_left">4dp</dimen>
     <dimen name="lb_search_orb_margin_right">4dp</dimen>
     <dimen name="lb_search_orb_margin_top">4dp</dimen>
     <dimen name="lb_search_orb_size">52dp</dimen>
-    <!-- From: file:/usr/local/google/buildbot/repo_clients/https___googleplex-android.googlesource.com_a_platform_manifest.git/lmp-preview-release/frameworks/support/v17/leanback/res/values/colors.xml -->
-    <eat-comment />
-
-    <item name="lb_view_dimmed_level" type="dimen">60%</item>
-    <!-- From: file:/usr/local/google/buildbot/repo_clients/https___googleplex-android.googlesource.com_a_platform_manifest.git/lmp-preview-release/frameworks/support/v17/leanback/res/values/dimens.xml -->
-    <eat-comment />
+    <dimen name="lb_search_orb_unfocused_z">2dp</dimen>
+    <dimen name="lb_vertical_grid_padding_bottom">87dp</dimen>
 
     <item name="lb_browse_header_unselect_alpha" type="fraction">50%</item>
-    <item name="lb_focus_zoom_factor_large" type="fraction">114%</item>
-    <item name="lb_focus_zoom_factor_medium" type="fraction">110%</item>
-    <item name="lb_focus_zoom_factor_small" type="fraction">106%</item>
-    <item name="lb_search_bar_speech_orb_focused_zoom" type="fraction">120%</item>
+    <item name="lb_browse_rows_scale" type="fraction">80%</item>
+    <item name="lb_focus_zoom_factor_large" type="fraction">118%</item>
+    <item name="lb_focus_zoom_factor_medium" type="fraction">114%</item>
+    <item name="lb_focus_zoom_factor_small" type="fraction">110%</item>
     <item name="lb_search_bar_speech_orb_max_level_zoom" type="fraction">144%</item>
-    <item name="lb_search_orb_brightness_alpha" type="fraction">15%</item>
     <item name="lb_search_orb_focused_zoom" type="fraction">120%</item>
-    <!-- From: file:/usr/local/google/buildbot/repo_clients/https___googleplex-android.googlesource.com_a_platform_manifest.git/lmp-preview-release/frameworks/support/v17/leanback/res/values/ids.xml -->
-    <eat-comment />
-
+    <item name="lb_view_active_level" type="fraction">0%</item>
+    <item name="lb_view_dimmed_level" type="fraction">60%</item>
+    <item name="lb_control_closed_captioning" type="id"/>
+    <item name="lb_control_fast_forward" type="id"/>
+    <item name="lb_control_fast_rewind" type="id"/>
+    <item name="lb_control_high_quality" type="id"/>
+    <item name="lb_control_more_actions" type="id"/>
+    <item name="lb_control_play_pause" type="id"/>
+    <item name="lb_control_repeat" type="id"/>
+    <item name="lb_control_shuffle" type="id"/>
+    <item name="lb_control_skip_next" type="id"/>
+    <item name="lb_control_skip_previous" type="id"/>
+    <item name="lb_control_thumbs_down" type="id"/>
+    <item name="lb_control_thumbs_up" type="id"/>
     <item name="lb_focus_animator" type="id"/>
-    <item name="lb_header_transition_position" type="id"/>
-    <!-- From: file:/usr/local/google/buildbot/repo_clients/https___googleplex-android.googlesource.com_a_platform_manifest.git/lmp-preview-release/frameworks/support/v17/leanback/res/values/dimens.xml -->
-    <eat-comment />
+    <item name="lb_slide_transition_value" type="id"/>
 
     <integer name="lb_browse_headers_transition_delay">150</integer>
     <integer name="lb_browse_headers_transition_duration">250</integer>
     <integer name="lb_browse_rows_anim_duration">250</integer>
-    <!-- From: file:/usr/local/google/buildbot/repo_clients/https___googleplex-android.googlesource.com_a_platform_manifest.git/lmp-preview-release/frameworks/support/v17/leanback/res/values/integers.xml -->
-    <eat-comment />
-
     <integer name="lb_card_activated_animation_duration">150</integer>
     <integer name="lb_card_selected_animation_delay">400</integer>
     <integer name="lb_card_selected_animation_duration">150</integer>
-    <!-- From: file:/usr/local/google/buildbot/repo_clients/https___googleplex-android.googlesource.com_a_platform_manifest.git/lmp-preview-release/frameworks/support/v17/leanback/res/values/dimens.xml -->
-    <eat-comment />
-
     <integer name="lb_details_description_body_max_lines">5</integer>
     <integer name="lb_details_description_body_min_lines">3</integer>
     <integer name="lb_details_description_subtitle_max_lines">1</integer>
     <integer name="lb_details_description_title_max_lines">2</integer>
-    <!-- From: file:/usr/local/google/buildbot/repo_clients/https___googleplex-android.googlesource.com_a_platform_manifest.git/lmp-preview-release/frameworks/support/v17/leanback/res/values/integers.xml -->
-    <eat-comment />
-
+    <integer name="lb_error_message_max_lines">1</integer>
+    <integer name="lb_playback_bg_fade_in_ms">325</integer>
+    <integer name="lb_playback_bg_fade_out_ms">500</integer>
+    <integer name="lb_playback_controls_fade_in_ms">250</integer>
+    <integer name="lb_playback_controls_fade_out_ms">325</integer>
+    <integer name="lb_playback_controls_show_time_ms">3000</integer>
+    <integer name="lb_playback_description_fade_in_ms">250</integer>
+    <integer name="lb_playback_description_fade_out_ms">200</integer>
+    <integer name="lb_playback_rows_fade_delay_ms">100</integer>
+    <integer name="lb_playback_rows_fade_in_ms">150</integer>
+    <integer name="lb_playback_rows_fade_out_ms">250</integer>
     <integer name="lb_search_bar_speech_mode_background_alpha">179</integer>
     <integer name="lb_search_bar_text_mode_background_alpha">51</integer>
-    <!-- From: file:/usr/local/google/buildbot/repo_clients/https___googleplex-android.googlesource.com_a_platform_manifest.git/lmp-preview-release/frameworks/support/v17/leanback/res/values/dimens.xml -->
-    <eat-comment />
 
     <item name="lb_search_orb_pulse_duration_ms" type="integer">1000</item>
-    <item name="lb_search_orb_scale_down_duration_ms" type="integer">100</item>
-    <!-- From: file:/usr/local/google/buildbot/repo_clients/https___googleplex-android.googlesource.com_a_platform_manifest.git/lmp-preview-release/frameworks/support/v17/leanback/res/values/strings.xml -->
-    <eat-comment />
+    <item name="lb_search_orb_scale_duration_ms" type="integer">150</item>
 
+    <string name="lb_playback_controls_closed_captioning_disable">Disable Closed Captioning</string>
+    <string name="lb_playback_controls_closed_captioning_enable">Enable Closed Captioning</string>
+    <string name="lb_playback_controls_fast_forward">Fast Forward</string>
+    <string name="lb_playback_controls_high_quality_disable">Disable High Quality</string>
+    <string name="lb_playback_controls_high_quality_enable">Enable High Quality</string>
+    <string name="lb_playback_controls_more_actions">More Actions</string>
+    <string name="lb_playback_controls_pause">Pause</string>
+    <string name="lb_playback_controls_play">Play</string>
+    <string name="lb_playback_controls_repeat_all">Repeat All</string>
+    <string name="lb_playback_controls_repeat_none">Repeat None</string>
+    <string name="lb_playback_controls_repeat_one">Repeat One</string>
+    <string name="lb_playback_controls_rewind">Rewind</string>
+    <string name="lb_playback_controls_shuffle_disable">Disable Shuffle</string>
+    <string name="lb_playback_controls_shuffle_enable">Enable Shuffle</string>
+    <string name="lb_playback_controls_skip_next">Skip Next</string>
+    <string name="lb_playback_controls_skip_previous">Skip Previous</string>
+    <string name="lb_playback_controls_thumb_down">Deselect Thumb Down</string>
+    <string name="lb_playback_controls_thumb_down_outline">Select Thumb Down</string>
+    <string name="lb_playback_controls_thumb_up">Deselect Thumb Up</string>
+    <string name="lb_playback_controls_thumb_up_outline">Select Thumb Up</string>
     <string name="lb_search_bar_hint">Search</string>
     <string name="lb_search_bar_hint_speech">Speak to search</string>
     <string name="lb_search_bar_hint_with_title">Search <ns1:g id="search context">%1$s</ns1:g></string>
     <string name="lb_search_bar_hint_with_title_speech">Speak to search <ns1:g id="search context">%1$s</ns1:g></string>
     <string name="orb_search_action">Search Action</string>
-    <!-- From: file:/usr/local/google/buildbot/repo_clients/https___googleplex-android.googlesource.com_a_platform_manifest.git/lmp-preview-release/frameworks/support/v17/leanback/res/values/styles.xml -->
-    <eat-comment />
 
-    <style name="TextAppearance.Leanback" parent="android:TextAppearance.Holo">
+    <style name="TextAppearance.Leanback" parent="TextAppearance.LeanbackBase">
 
         <!-- Any text appearance overrides go here. -->
         <item name="android:fontFamily">sans-serif-condensed</item>
@@ -401,7 +512,7 @@
 
     <style name="TextAppearance.Leanback.DetailsDescriptionBody">
         <item name="android:textSize">@dimen/lb_details_description_body_text_size</item>
-        <item name="android:textColor">@color/lb_details_description_color</item>
+        <item name="android:textColor">@color/lb_details_description_body_color</item>
         <item name="android:fontFamily">sans-serif</item>
     </style>
 
@@ -414,6 +525,12 @@
     <style name="TextAppearance.Leanback.DetailsDescriptionTitle">
         <item name="android:textSize">@dimen/lb_details_description_title_text_size</item>
         <item name="android:textColor">@color/lb_details_description_color</item>
+        <item name="android:fontFamily">sans-serif-light</item>
+    </style>
+
+    <style name="TextAppearance.Leanback.ErrorMessage">
+        <item name="android:textSize">@dimen/lb_error_message_text_size</item>
+        <item name="android:textColor">@color/lb_error_message_color_on_opaque</item>
         <item name="android:fontFamily">sans-serif</item>
     </style>
 
@@ -422,9 +539,13 @@
         <item name="android:textColor">@color/lb_browse_header_color</item>
     </style>
 
-    <style name="TextAppearance.Leanback.Row.Header" parent="TextAppearance.Leanback.Header">
+    <style name="TextAppearance.Leanback.PlaybackControlsTime">
+        <item name="android:textSize">@dimen/lb_playback_controls_time_text_size</item>
+        <item name="android:textColor">@color/lb_playback_controls_time_text_color</item>
         <item name="android:fontFamily">sans-serif</item>
     </style>
+
+    <style name="TextAppearance.Leanback.Row.Header" parent="TextAppearance.Leanback.Header"></style>
 
     <style name="TextAppearance.Leanback.Row.HoverCardDescription" parent="TextAppearance.Leanback">
         <item name="android:textSize">@dimen/lb_browse_row_hovercard_description_font_size</item>
@@ -443,10 +564,10 @@
         <item name="android:textSize">@dimen/lb_browse_title_text_size</item>
         <item name="android:textColor">@color/lb_browse_title_color</item>
     </style>
-    <!-- From: file:/usr/local/google/buildbot/repo_clients/https___googleplex-android.googlesource.com_a_platform_manifest.git/lmp-preview-release/frameworks/support/v17/leanback/res/values/themes.xml -->
-    <eat-comment />
 
-    <style name="Theme.Leanback" parent="android:Theme.Holo.NoActionBar">
+    <style name="TextAppearance.LeanbackBase" parent="android:TextAppearance.Holo"></style>
+
+    <style name="Theme.Leanback" parent="Theme.LeanbackBase">
         <item name="android:windowOverscan">true</item>
         <item name="baseCardViewStyle">@style/Widget.Leanback.BaseCardViewStyle</item>
         <item name="imageCardViewStyle">@style/Widget.Leanback.ImageCardViewStyle</item>
@@ -473,30 +594,47 @@
         <item name="detailsDescriptionSubtitleStyle">@style/Widget.Leanback.DetailsDescriptionSubtitleStyle</item>
         <item name="detailsDescriptionBodyStyle">@style/Widget.Leanback.DetailsDescriptionBodyStyle</item>
         <item name="detailsActionButtonStyle">@style/Widget.Leanback.DetailsActionButtonStyle</item>
+        <item name="playbackControlsButtonStyle">@style/Widget.Leanback.PlaybackControlsButtonStyle</item>
+        <item name="playbackControlsTimeStyle">@style/Widget.Leanback.PlaybackControlsTimeStyle</item>
+        <item name="playbackControlsActionIcons">@style/Widget.Leanback.PlaybackControlsActionIconsStyle</item>
+        <item name="errorMessageStyle">@style/Widget.Leanback.ErrorMessageStyle</item>
 
         <!-- TODO should be null, and set programatically to avoid dependence on leanback theme -->
-        <item name="defaultBrandColor">@color/lb_default_brand_color</item>
         <item name="defaultSearchColor">@null</item>
         <item name="defaultSearchBrightColor">@null</item>
         <item name="defaultSearchIcon">@null</item>
+        <item name="android:windowSharedElementEnterTransition">@transition/lb_shared_element_enter_transition</item>
+        <item name="android:windowEnterTransition">@transition/lb_enter_transition</item>
+        <item name="android:windowSharedElementReturnTransition">@transition/lb_shared_element_return_transition</item>
+        <item name="android:windowReturnTransition">@transition/lb_return_transition</item>
+        <item name="overlayDimMaskColor">@color/lb_view_dim_mask_color</item>
+        <item name="overlayDimActiveLevel">@fraction/lb_view_active_level</item>
+        <item name="overlayDimDimmedLevel">@fraction/lb_view_dimmed_level</item>
     </style>
-    <!-- From: file:/usr/local/google/buildbot/repo_clients/https___googleplex-android.googlesource.com_a_platform_manifest.git/lmp-preview-release/frameworks/support/v17/leanback/res/values/styles.xml -->
-    <eat-comment />
 
-    <style name="Widget.Leanback" parent="android:Widget.Holo" />
+    <style name="Theme.LeanbackBase" parent="android:Theme.Holo.NoActionBar">
+        <item name="playbackProgressPrimaryColor">@color/lb_playback_progress_color_no_theme</item>
+        <item name="playbackControlsIconHighlightColor">@color/lb_playback_icon_highlight_no_theme</item>
+        <item name="defaultBrandColor">@color/lb_default_brand_color</item>
+    </style>
 
-    <style name="Widget.Leanback.BaseCardViewStyle" />
+    <style name="Widget.Leanback" parent="Widget.LeanbackBase" />
 
-    <style name="Widget.Leanback.DetailsActionButtonStyle" parent="android:Widget.Holo.Button.Borderless">
+    <style name="Widget.Leanback.BaseCardViewStyle">
+        <item name="android:foreground">@drawable/lb_card_foreground</item>
+    </style>
+
+    <style name="Widget.Leanback.DetailsActionButtonStyle" parent="Widget.Leanback.DetailsActionButtonStyleBase">
         <item name="android:textAppearance">@style/TextAppearance.Leanback.DetailsActionButton</item>
         <item name="android:includeFontPadding">false</item>
-        <item name="android:background">@drawable/lb_selector_action_bg</item>
         <item name="android:drawablePadding">@dimen/lb_action_icon_margin</item>
         <item name="android:focusable">true</item>
         <item name="android:focusableInTouchMode">true</item>
         <item name="android:paddingLeft">@dimen/lb_action_padding_horizontal</item>
         <item name="android:paddingRight">@dimen/lb_action_padding_horizontal</item>
     </style>
+
+    <style name="Widget.Leanback.DetailsActionButtonStyleBase" parent="android:Widget.Holo.Button.Borderless"></style>
 
     <style name="Widget.Leanback.DetailsDescriptionBodyStyle">
         <item name="android:textAppearance">@style/TextAppearance.Leanback.DetailsDescriptionBody</item>
@@ -518,6 +656,13 @@
         <item name="android:ellipsize">end</item>
     </style>
 
+    <style name="Widget.Leanback.ErrorMessageStyle">
+        <item name="android:textAppearance">@style/TextAppearance.Leanback.ErrorMessage</item>
+        <item name="android:includeFontPadding">false</item>
+        <item name="android:maxLines">@integer/lb_error_message_max_lines</item>
+        <item name="android:ellipsize">end</item>
+    </style>
+
     <style name="Widget.Leanback.GridItems" />
 
     <style name="Widget.Leanback.GridItems.VerticalGridView">
@@ -526,11 +671,12 @@
         <item name="android:focusableInTouchMode">true</item>
         <item name="android:paddingLeft">?attr/browsePaddingLeft</item>
         <item name="android:paddingRight">?attr/browsePaddingRight</item>
-        <item name="android:paddingBottom">@dimen/lb_browse_item_vertical_margin</item>
+        <item name="android:paddingBottom">@dimen/lb_vertical_grid_padding_bottom</item>
         <item name="android:paddingTop">?attr/browseRowsMarginTop</item>
         <item name="android:gravity">center_horizontal</item>
         <item name="horizontalMargin">@dimen/lb_browse_item_horizontal_margin</item>
         <item name="verticalMargin">@dimen/lb_browse_item_vertical_margin</item>
+        <item name="columnWidth">wrap_content</item>
         <item name="focusOutFront">true</item>
     </style>
 
@@ -538,9 +684,7 @@
         <item name="android:minHeight">@dimen/lb_browse_header_height</item>
         <item name="android:textAppearance">@style/TextAppearance.Leanback.Header</item>
         <item name="android:singleLine">true</item>
-        <item name="android:ellipsize">marquee</item>
-        <item name="android:marqueeRepeatLimit">0</item>
-        <item name="android:paddingRight">@dimen/lb_browse_header_padding_right</item>
+        <item name="android:ellipsize">none</item>
     </style>
 
     <style name="Widget.Leanback.Headers" />
@@ -559,6 +703,34 @@
         <item name="cardType">infoUnder</item>
         <item name="infoVisibility">activated</item>
         <item name="android:background">@color/lb_basic_card_bg_color</item>
+        <item name="infoAreaBackground">@color/lb_basic_card_info_bg_color</item>
+    </style>
+
+    <style name="Widget.Leanback.PlaybackControlsActionIconsStyle">
+        <item name="play">@drawable/lb_ic_play</item>
+        <item name="pause">@drawable/lb_ic_pause</item>
+        <item name="fast_forward">@drawable/lb_ic_fast_forward</item>
+        <item name="rewind">@drawable/lb_ic_fast_rewind</item>
+        <item name="skip_next">@drawable/lb_ic_skip_next</item>
+        <item name="skip_previous">@drawable/lb_ic_skip_previous</item>
+        <item name="thumb_up_outline">@drawable/lb_ic_thumb_up_outline</item>
+        <item name="thumb_up">@drawable/lb_ic_thumb_up</item>
+        <item name="thumb_down_outline">@drawable/lb_ic_thumb_down_outline</item>
+        <item name="thumb_down">@drawable/lb_ic_thumb_down</item>
+        <item name="repeat">@drawable/lb_ic_loop</item>
+        <item name="repeat_one">@drawable/lb_ic_loop_one</item>
+        <item name="shuffle">@drawable/lb_ic_shuffle</item>
+        <item name="high_quality">@drawable/lb_ic_hq</item>
+        <item name="closed_captioning">@drawable/lb_ic_cc</item>
+    </style>
+
+    <style name="Widget.Leanback.PlaybackControlsButtonStyle">
+        <item name="android:focusable">true</item>
+        <item name="android:focusableInTouchMode">true</item>
+    </style>
+
+    <style name="Widget.Leanback.PlaybackControlsTimeStyle">
+        <item name="android:textAppearance">@style/TextAppearance.Leanback.PlaybackControlsTime</item>
     </style>
 
     <style name="Widget.Leanback.Row"></style>
@@ -625,8 +797,8 @@
         <item name="android:textAppearance">@style/TextAppearance.Leanback.Title</item>
     </style>
 
-    <style name="Widget.Leanback.TitleView">
-        <item name="searchAffordanceColor">?attr/defaultSearchColor</item>
-    </style>
+    <style name="Widget.Leanback.TitleView"></style>
+
+    <style name="Widget.LeanbackBase" parent="android:Widget.Holo" />
 
 </resources>

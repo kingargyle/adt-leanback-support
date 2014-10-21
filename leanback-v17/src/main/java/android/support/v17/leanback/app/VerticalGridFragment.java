@@ -14,7 +14,12 @@
 package android.support.v17.leanback.app;
 
 import android.support.v17.leanback.R;
+import android.support.v17.leanback.transition.TransitionHelper;
+import android.support.v17.leanback.widget.OnItemViewClickedListener;
+import android.support.v17.leanback.widget.OnItemViewSelectedListener;
+import android.support.v17.leanback.widget.Presenter;
 import android.support.v17.leanback.widget.Row;
+import android.support.v17.leanback.widget.RowPresenter;
 import android.support.v17.leanback.widget.TitleView;
 import android.support.v17.leanback.widget.VerticalGridPresenter;
 import android.support.v17.leanback.widget.ObjectAdapter;
@@ -50,11 +55,13 @@ public class VerticalGridFragment extends Fragment {
     private VerticalGridPresenter.ViewHolder mGridViewHolder;
     private OnItemSelectedListener mOnItemSelectedListener;
     private OnItemClickedListener mOnItemClickedListener;
+    private OnItemViewSelectedListener mOnItemViewSelectedListener;
+    private OnItemViewClickedListener mOnItemViewClickedListener;
     private View.OnClickListener mExternalOnSearchClickedListener;
     private int mSelectedPosition = -1;
 
     private TitleView mTitleView;
-    private int mSearchAffordanceColor;
+    private SearchOrbView.Colors mSearchAffordanceColors;
     private boolean mSearchAffordanceColorSet;
     private boolean mShowingTitle = true;
 
@@ -109,7 +116,10 @@ public class VerticalGridFragment extends Fragment {
             throw new IllegalArgumentException("Grid presenter may not be null");
         }
         mGridPresenter = gridPresenter;
-        mGridPresenter.setOnItemSelectedListener(mRowSelectedListener);
+        mGridPresenter.setOnItemViewSelectedListener(mRowSelectedListener);
+        if (mOnItemViewClickedListener != null) {
+            mGridPresenter.setOnItemViewClickedListener(mOnItemViewClickedListener);
+        }
         if (mOnItemClickedListener != null) {
             mGridPresenter.setOnItemClickedListener(mOnItemClickedListener);
         }
@@ -137,23 +147,37 @@ public class VerticalGridFragment extends Fragment {
         return mAdapter;
     }
 
-    final private OnItemSelectedListener mRowSelectedListener = new OnItemSelectedListener() {
+    final private OnItemViewSelectedListener mRowSelectedListener =
+            new OnItemViewSelectedListener() {
         @Override
-        public void onItemSelected(Object item, Row row) {
+        public void onItemSelected(Presenter.ViewHolder itemViewHolder, Object item,
+                RowPresenter.ViewHolder rowViewHolder, Row row) {
             int position = mGridViewHolder.getGridView().getSelectedPosition();
             if (DEBUG) Log.v(TAG, "row selected position " + position);
             onRowSelected(position);
             if (mOnItemSelectedListener != null) {
                 mOnItemSelectedListener.onItemSelected(item, row);
             }
+            if (mOnItemViewSelectedListener != null) {
+                mOnItemViewSelectedListener.onItemSelected(itemViewHolder, item,
+                        rowViewHolder, row);
+            }
         }
     };
 
     /**
      * Sets an item selection listener.
+     * @deprecated Use {@link #setOnItemViewSelectedListener(OnItemViewSelectedListener)}
      */
     public void setOnItemSelectedListener(OnItemSelectedListener listener) {
         mOnItemSelectedListener = listener;
+    }
+
+    /**
+     * Sets an item selection listener.
+     */
+    public void setOnItemViewSelectedListener(OnItemViewSelectedListener listener) {
+        mOnItemViewSelectedListener = listener;
     }
 
     private void onRowSelected(int position) {
@@ -174,6 +198,7 @@ public class VerticalGridFragment extends Fragment {
 
     /**
      * Sets an item clicked listener.
+     * @deprecated Use {@link #setOnItemViewClickedListener(OnItemViewClickedListener)}
      */
     public void setOnItemClickedListener(OnItemClickedListener listener) {
         mOnItemClickedListener = listener;
@@ -184,9 +209,27 @@ public class VerticalGridFragment extends Fragment {
 
     /**
      * Returns the item clicked listener.
+     * @deprecated Use {@link #getOnItemViewClickedListener()}
      */
     public OnItemClickedListener getOnItemClickedListener() {
         return mOnItemClickedListener;
+    }
+
+    /**
+     * Sets an item clicked listener.
+     */
+    public void setOnItemViewClickedListener(OnItemViewClickedListener listener) {
+        mOnItemViewClickedListener = listener;
+        if (mGridPresenter != null) {
+            mGridPresenter.setOnItemViewClickedListener(mOnItemViewClickedListener);
+        }
+    }
+
+    /**
+     * Returns the item clicked listener.
+     */
+    public OnItemViewClickedListener getOnItemViewClickedListener() {
+        return mOnItemViewClickedListener;
     }
 
     /**
@@ -210,29 +253,45 @@ public class VerticalGridFragment extends Fragment {
     }
 
     /**
-     * Sets the color used to draw the search affordance.
+     * Sets the {@link SearchOrbView.Colors} used to draw the search affordance.
      */
-    public void setSearchAffordanceColor(int color) {
-        mSearchAffordanceColor = color;
+    public void setSearchAffordanceColors(SearchOrbView.Colors colors) {
+        mSearchAffordanceColors = colors;
         mSearchAffordanceColorSet = true;
         if (mTitleView != null) {
-            mTitleView.setSearchAffordanceColor(mSearchAffordanceColor);
+            mTitleView.setSearchAffordanceColors(mSearchAffordanceColors);
         }
+    }
+
+    /**
+     * Returns the {@link SearchOrbView.Colors} used to draw the search affordance.
+     */
+    public SearchOrbView.Colors getSearchAffordanceColors() {
+        if (mSearchAffordanceColorSet) {
+            return mSearchAffordanceColors;
+        }
+        if (mTitleView == null) {
+            throw new IllegalStateException("Fragment views not yet created");
+        }
+        return mTitleView.getSearchAffordanceColors();
+    }
+
+    /**
+     * Sets the color used to draw the search affordance.
+     * A default brighter color will be set by the framework.
+     *
+     * @param color The color to use for the search affordance.
+     */
+    public void setSearchAffordanceColor(int color) {
+        setSearchAffordanceColors(new SearchOrbView.Colors(color));
     }
 
     /**
      * Returns the color used to draw the search affordance.
      */
     public int getSearchAffordanceColor() {
-        if (mSearchAffordanceColorSet) {
-            return mSearchAffordanceColor;
-        }
-        if (mTitleView == null) {
-            throw new IllegalStateException("Fragment views not yet created");
-        }
-        return mTitleView.getSearchAffordanceColor();
+        return getSearchAffordanceColors().color;
     }
-
 
     private final BrowseFrameLayout.OnFocusSearchListener mOnFocusSearchListener =
             new BrowseFrameLayout.OnFocusSearchListener() {
@@ -268,7 +327,7 @@ public class VerticalGridFragment extends Fragment {
         mTitleView.setBadgeDrawable(mBadgeDrawable);
         mTitleView.setTitle(mTitle);
         if (mSearchAffordanceColorSet) {
-            mTitleView.setSearchAffordanceColor(mSearchAffordanceColor);
+            mTitleView.setSearchAffordanceColors(mSearchAffordanceColors);
         }
         if (mExternalOnSearchClickedListener != null) {
             mTitleView.setOnSearchClickedListener(mExternalOnSearchClickedListener);
@@ -277,13 +336,13 @@ public class VerticalGridFragment extends Fragment {
         mSceneWithTitle = sTransitionHelper.createScene(root, new Runnable() {
             @Override
             public void run() {
-                TitleTransitionHelper.showTitle(mTitleView, true);
+                mTitleView.setVisibility(View.VISIBLE);
             }
         });
         mSceneWithoutTitle = sTransitionHelper.createScene(root, new Runnable() {
             @Override
             public void run() {
-                TitleTransitionHelper.showTitle(mTitleView, false);
+                mTitleView.setVisibility(View.INVISIBLE);
             }
         });
         mTitleUpTransition = TitleTransitionHelper.createTransitionTitleUp(sTransitionHelper);
