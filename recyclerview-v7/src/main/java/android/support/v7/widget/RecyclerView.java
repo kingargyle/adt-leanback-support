@@ -31,6 +31,7 @@ import android.support.v4.util.ArrayMap;
 import android.support.v4.view.MotionEventCompat;
 import android.support.v4.view.VelocityTrackerCompat;
 import android.support.v4.view.ViewCompat;
+import android.support.v4.view.ViewConfigurationCompat;
 import android.support.v4.view.accessibility.AccessibilityEventCompat;
 import android.support.v4.view.accessibility.AccessibilityNodeInfoCompat;
 import android.support.v4.view.accessibility.AccessibilityRecordCompat;
@@ -106,6 +107,20 @@ public class RecyclerView extends ViewGroup {
     public static final long NO_ID = -1;
     public static final int INVALID_TYPE = -1;
 
+    /**
+     * Constant for use with {@link #setScrollingTouchSlop(int)}. Indicates
+     * that the RecyclerView should use the standard touch slop for smooth,
+     * continuous scrolling.
+     */
+    public static final int TOUCH_SLOP_DEFAULT = 0;
+
+    /**
+     * Constant for use with {@link #setScrollingTouchSlop(int)}. Indicates
+     * that the RecyclerView should use the standard touch slop for scrolling
+     * widgets that snap to a page or other coarse-grained barrier.
+     */
+    public static final int TOUCH_SLOP_PAGING = 1;
+
     private static final int MAX_SCROLL_DURATION = 2000;
 
     private final RecyclerViewDataObserver mObserver = new RecyclerViewDataObserver();
@@ -135,16 +150,13 @@ public class RecyclerView extends ViewGroup {
      */
     private final Runnable mUpdateChildViewsRunnable = new Runnable() {
         public void run() {
-            if (!mAdapterHelper.hasPendingUpdates()) {
-                return;
-            }
             if (!mFirstLayoutComplete) {
                 // a layout request will happen, we should not do layout here.
                 return;
             }
             if (mDataSetHasChangedAfterLayout) {
                 dispatchLayout();
-            } else {
+            } else if (mAdapterHelper.hasPendingUpdates()) {
                 eatRequestLayout();
                 mAdapterHelper.preProcess();
                 if (!mLayoutRequestEaten) {
@@ -224,7 +236,7 @@ public class RecyclerView extends ViewGroup {
     private int mInitialTouchY;
     private int mLastTouchX;
     private int mLastTouchY;
-    private final int mTouchSlop;
+    private int mTouchSlop;
     private final int mMinFlingVelocity;
     private final int mMaxFlingVelocity;
 
@@ -359,11 +371,36 @@ public class RecyclerView extends ViewGroup {
             @Override
             public void attachViewToParent(View child, int index,
                     ViewGroup.LayoutParams layoutParams) {
+                final ViewHolder vh = getChildViewHolderInt(child);
+                if (vh != null) {
+                    if (!vh.isTmpDetached() && !vh.shouldIgnore()) {
+                        throw new IllegalArgumentException("Called attach on a child which is not"
+                                + " detached: " + vh);
+                    }
+                    if (DEBUG) {
+                        Log.d(TAG, "reAttach " + vh);
+                    }
+                    vh.clearTmpDetachFlag();
+                }
                 RecyclerView.this.attachViewToParent(child, index, layoutParams);
             }
 
             @Override
             public void detachViewFromParent(int offset) {
+                final View view = getChildAt(offset);
+                if (view != null) {
+                    final ViewHolder vh = getChildViewHolderInt(view);
+                    if (vh != null) {
+                        if (vh.isTmpDetached() && !vh.shouldIgnore()) {
+                            throw new IllegalArgumentException("called detach on an already"
+                                    + " detached child " + vh);
+                        }
+                        if (DEBUG) {
+                            Log.d(TAG, "tmpDetach " + vh);
+                        }
+                        vh.addFlags(ViewHolder.FLAG_TMP_DETACHED);
+                    }
+                }
                 RecyclerView.this.detachViewFromParent(offset);
             }
         });
@@ -469,6 +506,32 @@ public class RecyclerView extends ViewGroup {
     }
 
     /**
+     * Configure the scrolling touch slop for a specific use case.
+     *
+     * Set up the RecyclerView's scrolling motion threshold based on common usages.
+     * Valid arguments are {@link #TOUCH_SLOP_DEFAULT} and {@link #TOUCH_SLOP_PAGING}.
+     *
+     * @param slopConstant One of the <code>TOUCH_SLOP_</code> constants representing
+     *                     the intended usage of this RecyclerView
+     */
+    public void setScrollingTouchSlop(int slopConstant) {
+        final ViewConfiguration vc = ViewConfiguration.get(getContext());
+        switch (slopConstant) {
+            default:
+                Log.w(TAG, "setScrollingTouchSlop(): bad argument constant "
+                      + slopConstant + "; using default value");
+                // fall-through
+            case TOUCH_SLOP_DEFAULT:
+                mTouchSlop = vc.getScaledTouchSlop();
+                break;
+
+            case TOUCH_SLOP_PAGING:
+                mTouchSlop = ViewConfigurationCompat.getScaledPagingTouchSlop(vc);
+                break;
+        }
+    }
+
+    /**
      * Swaps the current adapter with the provided one. It is similar to
      * {@link #setAdapter(Adapter)} but assumes existing adapter and the new adapter uses the same
      * {@link ViewHolder} and does not clear the RecycledViewPool.
@@ -514,6 +577,7 @@ public class RecyclerView extends ViewGroup {
             boolean removeAndRecycleViews) {
         if (mAdapter != null) {
             mAdapter.unregisterAdapterDataObserver(mObserver);
+            mAdapter.onDetachedFromRecyclerView(this);
         }
         if (!compatibleWithPrevious || removeAndRecycleViews) {
             // end all running animations
@@ -526,7 +590,7 @@ public class RecyclerView extends ViewGroup {
             // count.
             if (mLayout != null) {
                 mLayout.removeAndRecycleAllViews(mRecycler);
-                mLayout.removeAndRecycleScrapInt(mRecycler, true);
+                mLayout.removeAndRecycleScrapInt(mRecycler);
             }
         }
         mAdapterHelper.reset();
@@ -534,6 +598,7 @@ public class RecyclerView extends ViewGroup {
         mAdapter = adapter;
         if (adapter != null) {
             adapter.registerAdapterDataObserver(mObserver);
+            adapter.onAttachedToRecyclerView(this);
         }
         if (mLayout != null) {
             mLayout.onAdapterChanged(oldAdapter, mAdapter);
@@ -636,12 +701,16 @@ public class RecyclerView extends ViewGroup {
      * purely for the purpose of being animated out of view. They are drawn as a regular
      * part of the child list of the RecyclerView, but they are invisible to the LayoutManager
      * as they are managed separately from the regular child views.
-     * @param view The view to be removed
+     * @param viewHolder The ViewHolder to be removed
      */
-    private void addAnimatingView(View view) {
+    private void addAnimatingView(ViewHolder viewHolder) {
+        final View view = viewHolder.itemView;
         final boolean alreadyParented = view.getParent() == this;
         mRecycler.unscrapView(getChildViewHolder(view));
-        if (!alreadyParented) {
+        if (viewHolder.isTmpDetached()) {
+            // re-attach
+            mChildHelper.attachViewToParent(view, -1, view.getLayoutParams(), true);
+        } else if(!alreadyParented) {
             mChildHelper.addView(view, true);
         } else {
             mChildHelper.hide(view);
@@ -651,11 +720,13 @@ public class RecyclerView extends ViewGroup {
     /**
      * Removes a view from the animatingViews list.
      * @param view The view to be removed
-     * @see #addAnimatingView(View)
+     * @see #addAnimatingView(RecyclerView.ViewHolder)
+     * @return true if an animating view is removed
      */
-    private void removeAnimatingView(View view) {
+    private boolean removeAnimatingView(View view) {
         eatRequestLayout();
-        if (mChildHelper.removeViewIfHidden(view)) {
+        final boolean removed = mChildHelper.removeViewIfHidden(view);
+        if (removed) {
             final ViewHolder viewHolder = getChildViewHolderInt(view);
             mRecycler.unscrapView(viewHolder);
             mRecycler.recycleViewHolderInternal(viewHolder);
@@ -664,6 +735,7 @@ public class RecyclerView extends ViewGroup {
             }
         }
         resumeRequestLayout(false);
+        return removed;
     }
 
     /**
@@ -892,9 +964,7 @@ public class RecyclerView extends ViewGroup {
      * This method consumes all deferred changes to avoid that case.
      */
     private void consumePendingUpdateOperations() {
-        if (mAdapterHelper.hasPendingUpdates()) {
-            mUpdateChildViewsRunnable.run();
-        }
+        mUpdateChildViewsRunnable.run();
     }
 
     /**
@@ -1952,9 +2022,7 @@ public class RecyclerView extends ViewGroup {
                     mState.mPreLayoutHolderMap.removeAt(i);
 
                     View disappearingItemView = disappearingItem.holder.itemView;
-                    removeDetachedView(disappearingItemView, false);
                     mRecycler.unscrapView(disappearingItem.holder);
-
                     animateDisappearance(disappearingItem);
                 }
             }
@@ -2015,7 +2083,7 @@ public class RecyclerView extends ViewGroup {
             }
         }
         resumeRequestLayout(false);
-        mLayout.removeAndRecycleScrapInt(mRecycler, !mState.mRunPredictiveAnimations);
+        mLayout.removeAndRecycleScrapInt(mRecycler);
         mState.mPreviousLayoutItemCount = mState.mItemCount;
         mDataSetHasChangedAfterLayout = false;
         mState.mRunSimpleAnimations = false;
@@ -2026,6 +2094,21 @@ public class RecyclerView extends ViewGroup {
             mRecycler.mChangedScrap.clear();
         }
         mState.mOldChangedHolders = null;
+    }
+
+    @Override
+    protected void removeDetachedView(View child, boolean animate) {
+        ViewHolder vh = getChildViewHolderInt(child);
+        if (vh != null) {
+            if (vh.isTmpDetached()) {
+                vh.clearTmpDetachFlag();
+            } else if (!vh.shouldIgnore()) {
+                throw new IllegalArgumentException("Called removeDetachedView with a view which"
+                        + " is not flagged as tmp detached." + vh);
+            }
+        }
+        dispatchChildDetached(child);
+        super.removeDetachedView(child, animate);
     }
 
     /**
@@ -2092,7 +2175,7 @@ public class RecyclerView extends ViewGroup {
 
     private void animateDisappearance(ItemHolderInfo disappearingItem) {
         View disappearingItemView = disappearingItem.holder.itemView;
-        addAnimatingView(disappearingItemView);
+        addAnimatingView(disappearingItem.holder);
         int oldLeft = disappearingItem.left;
         int oldTop = disappearingItem.top;
         int newLeft = disappearingItemView.getLeft();
@@ -2124,8 +2207,7 @@ public class RecyclerView extends ViewGroup {
 
     private void animateChange(ViewHolder oldHolder, ViewHolder newHolder) {
         oldHolder.setIsRecyclable(false);
-        removeDetachedView(oldHolder.itemView, false);
-        addAnimatingView(oldHolder.itemView);
+        addAnimatingView(oldHolder);
         oldHolder.mShadowedHolder = newHolder;
         mRecycler.unscrapView(oldHolder);
         if (DEBUG) {
@@ -3432,8 +3514,8 @@ public class RecyclerView extends ViewGroup {
          * Recycle a detached view. The specified view will be added to a pool of views
          * for later rebinding and reuse.
          *
-         * <p>A view must be fully detached before it may be recycled. If the View is scrapped,
-         * it will be removed from scrap list.</p>
+         * <p>A view must be fully detached (removed from parent) before it may be recycled. If the
+         * View is scrapped, it will be removed from scrap list.</p>
          *
          * @param view Removed view for recycling
          * @see LayoutManager#removeAndRecycleView(View, Recycler)
@@ -3442,6 +3524,9 @@ public class RecyclerView extends ViewGroup {
             // This public recycle method tries to make view recycle-able since layout manager
             // intended to recycle this view (e.g. even if it is in scrap or change cache)
             ViewHolder holder = getChildViewHolderInt(view);
+            if (holder.isTmpDetached()) {
+                removeDetachedView(view, false);
+            }
             if (holder.isScrap()) {
                 holder.unScrap();
             } else if (holder.wasReturnedFromScrap()){
@@ -3502,6 +3587,11 @@ public class RecyclerView extends ViewGroup {
                         "Scrapped or attached views may not be recycled. isScrap:"
                                 + holder.isScrap() + " isAttached:"
                                 + (holder.itemView.getParent() != null));
+            }
+
+            if (holder.isTmpDetached()) {
+                throw new IllegalArgumentException("Tmp detached view should be removed "
+                        + "from RecyclerView before it can be recycled: " + holder);
             }
 
             if (holder.shouldIgnore()) {
@@ -4193,6 +4283,26 @@ public class RecyclerView extends ViewGroup {
          */
         public void unregisterAdapterDataObserver(AdapterDataObserver observer) {
             mObservable.unregisterObserver(observer);
+        }
+
+        /**
+         * Called by RecyclerView when it starts observing this Adapter.
+         * <p>
+         * Keep in mind that same adapter may be observed by multiple RecyclerViews.
+         *
+         * @param recyclerView The RecyclerView instance which started observing this adapter.
+         * @see #onDetachedFromRecyclerView(RecyclerView)
+         */
+        public void onAttachedToRecyclerView(RecyclerView recyclerView) {
+        }
+
+        /**
+         * Called by RecyclerView when it stops observing this Adapter.
+         *
+         * @param recyclerView The RecyclerView instance which stopped observing this adapter.
+         * @see #onAttachedToRecyclerView(RecyclerView)
+         */
+        public void onDetachedFromRecyclerView(RecyclerView recyclerView) {
         }
 
         /**
@@ -5367,23 +5477,22 @@ public class RecyclerView extends ViewGroup {
          * call remove and invalidate RecyclerView to ensure UI update.
          *
          * @param recycler Recycler
-         * @param remove   Whether scrapped views should be removed from ViewGroup or not. This
-         *                 method will invalidate RecyclerView if it removes any scrapped child.
          */
-        void removeAndRecycleScrapInt(Recycler recycler, boolean remove) {
+        void removeAndRecycleScrapInt(Recycler recycler) {
             final int scrapCount = recycler.getScrapCount();
             for (int i = 0; i < scrapCount; i++) {
                 final View scrap = recycler.getScrapViewAt(i);
-                if (getChildViewHolderInt(scrap).shouldIgnore()) {
+                final ViewHolder vh = getChildViewHolderInt(scrap);
+                if (vh.shouldIgnore()) {
                     continue;
                 }
-                if (remove) {
+                if (vh.isTmpDetached()) {
                     mRecyclerView.removeDetachedView(scrap, false);
                 }
                 recycler.quickRecycleScrapView(scrap);
             }
             recycler.clearScrap();
-            if (remove && scrapCount > 0) {
+            if (scrapCount > 0) {
                 mRecyclerView.invalidate();
             }
         }
@@ -5748,8 +5857,8 @@ public class RecyclerView extends ViewGroup {
             final int parentBottom = getHeight() - getPaddingBottom();
             final int childLeft = child.getLeft() + rect.left;
             final int childTop = child.getTop() + rect.top;
-            final int childRight = childLeft + rect.right;
-            final int childBottom = childTop + rect.bottom;
+            final int childRight = childLeft + rect.width();
+            final int childBottom = childTop + rect.height();
 
             final int offScreenLeft = Math.min(0, childLeft - parentLeft);
             final int offScreenTop = Math.min(0, childTop - parentTop);
@@ -5784,7 +5893,8 @@ public class RecyclerView extends ViewGroup {
          */
         @Deprecated
         public boolean onRequestChildFocus(RecyclerView parent, View child, View focused) {
-            return false;
+            // eat the request if we are in the middle of a scroll or layout
+            return isSmoothScrolling() || parent.mRunningLayoutOrScroll;
         }
 
         /**
@@ -6220,10 +6330,13 @@ public class RecyclerView extends ViewGroup {
         }
 
         // called by accessibility delegate
-        void onInitializeAccessibilityNodeInfoForItem(View host,
-                AccessibilityNodeInfoCompat info) {
-            onInitializeAccessibilityNodeInfoForItem(mRecyclerView.mRecycler, mRecyclerView.mState,
-                    host, info);
+        void onInitializeAccessibilityNodeInfoForItem(View host, AccessibilityNodeInfoCompat info) {
+            final ViewHolder vh = getChildViewHolderInt(host);
+            // avoid trying to create accessibility node info for removed children
+            if (vh != null && !vh.isRemoved()) {
+                onInitializeAccessibilityNodeInfoForItem(mRecyclerView.mRecycler,
+                        mRecyclerView.mState, host, info);
+            }
         }
 
         /**
@@ -6660,6 +6773,12 @@ public class RecyclerView extends ViewGroup {
          */
         static final int FLAG_IGNORE = 1 << 7;
 
+        /**
+         * When the View is detached form the parent, we set this flag so that we can take correct
+         * action when we need to remove it or add it back.
+         */
+        static final int FLAG_TMP_DETACHED = 1 << 8;
+
         private int mFlags;
 
         private int mIsRecyclableCount = 0;
@@ -6764,6 +6883,10 @@ public class RecyclerView extends ViewGroup {
             mFlags = mFlags & ~FLAG_RETURNED_FROM_SCRAP;
         }
 
+        void clearTmpDetachFlag() {
+            mFlags = mFlags & ~FLAG_TMP_DETACHED;
+        }
+
         void stopIgnoring() {
             mFlags = mFlags & ~FLAG_IGNORE;
         }
@@ -6790,6 +6913,10 @@ public class RecyclerView extends ViewGroup {
 
         boolean isRemoved() {
             return (mFlags & FLAG_REMOVED) != 0;
+        }
+
+        boolean isTmpDetached() {
+            return (mFlags & FLAG_TMP_DETACHED) != 0;
         }
 
         void setFlags(int flags, int mask) {
@@ -6823,6 +6950,7 @@ public class RecyclerView extends ViewGroup {
             if (isRemoved()) sb.append(" removed");
             if (shouldIgnore()) sb.append(" ignored");
             if (isChanged()) sb.append(" changed");
+            if (isTmpDetached()) sb.append(" tmpDetached");
             if (!isRecyclable()) sb.append(" not recyclable(" + mIsRecyclableCount + ")");
             if (itemView.getParent() == null) sb.append(" no parent");
             sb.append("}");
@@ -7679,8 +7807,9 @@ public class RecyclerView extends ViewGroup {
         @Override
         public void onRemoveFinished(ViewHolder item) {
             item.setIsRecyclable(true);
-            removeAnimatingView(item.itemView);
-            removeDetachedView(item.itemView, false);
+            if (!removeAnimatingView(item.itemView) && item.isTmpDetached()) {
+                removeDetachedView(item.itemView, false);
+            }
         }
 
         @Override

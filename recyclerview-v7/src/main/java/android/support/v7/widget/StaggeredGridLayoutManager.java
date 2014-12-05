@@ -530,8 +530,6 @@ public class StaggeredGridLayoutManager extends RecyclerView.LayoutManager {
     @Override
     public void onLayoutChildren(RecyclerView.Recycler recycler, RecyclerView.State state) {
         ensureOrientationHelper();
-        // Update adapter size.
-        mLazySpanLookup.mAdapterSize = state.getItemCount();
 
         final AnchorInfo anchorInfo = mAnchorInfo;
         anchorInfo.reset();
@@ -913,6 +911,7 @@ public class StaggeredGridLayoutManager extends RecyclerView.LayoutManager {
         if (getChildCount() == 0) {
             return 0;
         }
+        ensureOrientationHelper();
         return ScrollbarHelper.computeScrollOffset(state, mPrimaryOrientation,
                 findFirstVisibleItemClosestToStart(!mSmoothScrollbarEnabled)
                 , findFirstVisibleItemClosestToEnd(!mSmoothScrollbarEnabled),
@@ -933,6 +932,7 @@ public class StaggeredGridLayoutManager extends RecyclerView.LayoutManager {
         if (getChildCount() == 0) {
             return 0;
         }
+        ensureOrientationHelper();
         return ScrollbarHelper.computeScrollExtent(state, mPrimaryOrientation,
                 findFirstVisibleItemClosestToStart(!mSmoothScrollbarEnabled)
                 , findFirstVisibleItemClosestToEnd(!mSmoothScrollbarEnabled),
@@ -953,6 +953,7 @@ public class StaggeredGridLayoutManager extends RecyclerView.LayoutManager {
         if (getChildCount() == 0) {
             return 0;
         }
+        ensureOrientationHelper();
         return ScrollbarHelper.computeScrollRange(state, mPrimaryOrientation,
                 findFirstVisibleItemClosestToStart(!mSmoothScrollbarEnabled)
                 , findFirstVisibleItemClosestToEnd(!mSmoothScrollbarEnabled),
@@ -1028,6 +1029,7 @@ public class StaggeredGridLayoutManager extends RecyclerView.LayoutManager {
         }
 
         if (getChildCount() > 0) {
+            ensureOrientationHelper();
             state.mAnchorPosition = mLastLayoutFromEnd ? getLastChildPosition()
                     : getFirstChildPosition();
             state.mVisibleAnchorPosition = findFirstVisibleItemPositionInt();
@@ -1133,6 +1135,7 @@ public class StaggeredGridLayoutManager extends RecyclerView.LayoutManager {
     }
 
     View findFirstVisibleItemClosestToStart(boolean fullyVisible) {
+        ensureOrientationHelper();
         final int boundsStart = mPrimaryOrientation.getStartAfterPadding();
         final int boundsEnd = mPrimaryOrientation.getEndAfterPadding();
         final int limit = getChildCount();
@@ -1147,6 +1150,7 @@ public class StaggeredGridLayoutManager extends RecyclerView.LayoutManager {
     }
 
     View findFirstVisibleItemClosestToEnd(boolean fullyVisible) {
+        ensureOrientationHelper();
         final int boundsStart = mPrimaryOrientation.getStartAfterPadding();
         final int boundsEnd = mPrimaryOrientation.getEndAfterPadding();
         for (int i = getChildCount() - 1; i >= 0; i --) {
@@ -2203,7 +2207,6 @@ public class StaggeredGridLayoutManager extends RecyclerView.LayoutManager {
 
         private static final int MIN_SIZE = 10;
         int[] mData;
-        int mAdapterSize; // we don't want to grow beyond that, unless it grows
         List<FullSpanItem> mFullSpanItems;
 
 
@@ -2260,9 +2263,6 @@ public class StaggeredGridLayoutManager extends RecyclerView.LayoutManager {
             int len = mData.length;
             while (len <= position) {
                 len *= 2;
-            }
-            if (len > mAdapterSize) {
-                len = mAdapterSize;
             }
             return len;
         }

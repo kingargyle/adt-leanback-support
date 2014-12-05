@@ -343,11 +343,6 @@ final class GridLayoutManager extends RecyclerView.LayoutManager {
      */
     private boolean mScrollEnabled = true;
 
-    /**
-     * Percent of overreach.
-     */
-    private float mPrimaryOverReach = 1f;
-
     private int[] mTempDeltas = new int[2];
 
     /**
@@ -502,14 +497,6 @@ final class GridLayoutManager extends RecyclerView.LayoutManager {
 
     public void setOnChildSelectedListener(OnChildSelectedListener listener) {
         mChildSelectedListener = listener;
-    }
-
-    public void setPrimaryOverReach(float fraction) {
-        if (fraction != mPrimaryOverReach) {
-            if (DEBUG) Log.v(getTag(), "setPrimaryOverReach " + fraction);
-            mPrimaryOverReach = fraction;
-            requestLayout();
-        }
     }
 
     private int getPositionByView(View view) {
@@ -845,9 +832,18 @@ final class GridLayoutManager extends RecyclerView.LayoutManager {
                 }
             }
 
-            if (measure && rowSize < 0 && mState.getItemCount() > 0) {
+            final int itemCount = mState.getItemCount();
+            if (measure && rowSize < 0 && itemCount > 0) {
                 if (scrapChildWidth < 0 && scrapChildHeight < 0) {
-                    measureScrapChild(mFocusPosition == NO_POSITION ? 0 : mFocusPosition,
+                    int position;
+                    if (mFocusPosition == NO_POSITION) {
+                        position = 0;
+                    } else if (mFocusPosition >= itemCount) {
+                        position = itemCount - 1;
+                    } else {
+                        position = mFocusPosition;
+                    }
+                    measureScrapChild(position,
                             MeasureSpec.makeMeasureSpec(0, MeasureSpec.UNSPECIFIED),
                             MeasureSpec.makeMeasureSpec(0, MeasureSpec.UNSPECIFIED),
                             mMeasuredDimension);
@@ -1498,7 +1494,8 @@ final class GridLayoutManager extends RecyclerView.LayoutManager {
         // We must use same delta in Pre Layout (if prelayout exists) and second layout.
         // So we cache the deltas in PreLayout and use it in second layout.
         int delta = 0, deltaSecondary = 0;
-        if (mFocusPosition != NO_POSITION && scrollToFocus) {
+        if (mFocusPosition != NO_POSITION && scrollToFocus
+                && mBaseGridView.getScrollState() != RecyclerView.SCROLL_STATE_IDLE) {
             // FIXME: we should get the remaining scroll animation offset from RecyclerView
             View focusView = findViewByPosition(mFocusPosition);
             if (focusView != null) {
@@ -1839,13 +1836,8 @@ final class GridLayoutManager extends RecyclerView.LayoutManager {
         mScrollOffsetPrimary -= paddingPrimaryDiff;
         mScrollOffsetSecondary -= paddingSecondaryDiff;
 
-        if (mOrientation == HORIZONTAL) {
-            mWindowAlignment.horizontal.setSize((int)(getWidth() * mPrimaryOverReach + 0.5f));
-            mWindowAlignment.vertical.setSize(getHeight());
-        } else {
-            mWindowAlignment.horizontal.setSize(getWidth());
-            mWindowAlignment.vertical.setSize((int) (getHeight() * mPrimaryOverReach + 0.5f));
-        }
+        mWindowAlignment.horizontal.setSize(getWidth());
+        mWindowAlignment.vertical.setSize(getHeight());
         mWindowAlignment.horizontal.setPadding(getPaddingLeft(), getPaddingRight());
         mWindowAlignment.vertical.setPadding(getPaddingTop(), getPaddingBottom());
         mSizePrimary = mWindowAlignment.mainAxis().getSize();
@@ -1869,9 +1861,12 @@ final class GridLayoutManager extends RecyclerView.LayoutManager {
     }
 
     public void setSelection(RecyclerView parent, int position, boolean smooth) {
-        if (mFocusPosition == position) {
-            return;
+        if (mFocusPosition != position) {
+            scrollToSelection(parent, position, smooth);
         }
+    }
+
+    private void scrollToSelection(RecyclerView parent, int position, boolean smooth) {
         View view = findViewByPosition(position);
         if (view != null) {
             mInSelection = true;
@@ -2250,11 +2245,7 @@ final class GridLayoutManager extends RecyclerView.LayoutManager {
         if (mScrollEnabled != scrollEnabled) {
             mScrollEnabled = scrollEnabled;
             if (mScrollEnabled && mFocusScrollStrategy == BaseGridView.FOCUS_SCROLL_ALIGNED) {
-                View focusView = findViewByPosition(mFocusPosition == NO_POSITION ? 0 :
-                    mFocusPosition);
-                if (focusView != null) {
-                    scrollToView(focusView, true);
-                }
+                scrollToSelection(mBaseGridView, mFocusPosition, true);
             }
         }
     }
@@ -2404,26 +2395,27 @@ final class GridLayoutManager extends RecyclerView.LayoutManager {
 
         View view = null;
         int movement = getMovement(direction);
+        final boolean isScroll = mBaseGridView.getScrollState() != RecyclerView.SCROLL_STATE_IDLE;
         if (mNumRows == 1) {
             // for simple row, use LinearSmoothScroller to smooth animation.
             // It will stay at a fixed cap speed in continuous scroll.
             if (movement == NEXT_ITEM) {
                 int newPos = mFocusPosition + mNumRows;
-                if (newPos < getItemCount()) {
+                if (newPos < getItemCount() && mScrollEnabled) {
                     setSelectionSmooth(mBaseGridView, newPos);
                     view = focused;
                 } else {
-                    if (!mFocusOutEnd) {
+                    if (isScroll || !mFocusOutEnd) {
                         view = focused;
                     }
                 }
             } else if (movement == PREV_ITEM){
                 int newPos = mFocusPosition - mNumRows;
-                if (newPos >= 0) {
+                if (newPos >= 0 && mScrollEnabled) {
                     setSelectionSmooth(mBaseGridView, newPos);
                     view = focused;
                 } else {
-                    if (!mFocusOutFront) {
+                    if (isScroll || !mFocusOutFront) {
                         view = focused;
                     }
                 }
@@ -2445,9 +2437,9 @@ final class GridLayoutManager extends RecyclerView.LayoutManager {
             if (view == null) {
                 // returning the same view to prevent focus lost when scrolling past the end of the list
                 if (movement == PREV_ITEM) {
-                    view = mFocusOutFront ? null : focused;
+                    view = mFocusOutFront && !isScroll ? null : focused;
                 } else if (movement == NEXT_ITEM){
-                    view = mFocusOutEnd ? null : focused;
+                    view = mFocusOutEnd && !isScroll ? null : focused;
                 }
             }
             leaveContext();

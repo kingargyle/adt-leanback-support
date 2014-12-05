@@ -16,6 +16,7 @@ package android.support.v17.leanback.app;
 import android.support.v17.leanback.R;
 import android.support.v17.leanback.transition.TransitionHelper;
 import android.support.v17.leanback.transition.TransitionListener;
+import android.support.v17.leanback.widget.BrowseFrameLayout;
 import android.support.v17.leanback.widget.HorizontalGridView;
 import android.support.v17.leanback.widget.ItemBridgeAdapter;
 import android.support.v17.leanback.widget.OnItemViewClickedListener;
@@ -46,6 +47,7 @@ import android.view.ViewGroup.MarginLayoutParams;
 import android.graphics.Color;
 import android.graphics.Rect;
 import android.graphics.drawable.Drawable;
+
 import static android.support.v7.widget.RecyclerView.NO_POSITION;
 
 /**
@@ -61,7 +63,7 @@ import static android.support.v7.widget.RecyclerView.NO_POSITION;
  * <p>
  * By default the BrowseFragment includes support for returning to the headers
  * when the user presses Back. For Activities that customize {@link
- * Activity#onBackPressed()}, you must disable this default Back key support by
+ * android.app.Activity#onBackPressed()}, you must disable this default Back key support by
  * calling {@link #setHeadersTransitionOnBackEnabled(boolean)} with false and
  * use {@link BrowseFragment.BrowseTransitionListener} and
  * {@link #startHeadersTransition(boolean)}.
@@ -557,6 +559,9 @@ public class BrowseFragment extends Fragment {
 
         @Override
         public boolean onRequestFocusInDescendants(int direction, Rect previouslyFocusedRect) {
+            if (getChildFragmentManager().isDestroyed()) {
+                return true;
+            }
             // Make sure not changing focus when requestFocus() is called.
             if (mCanShowHeaders && mShowingHeaders) {
                 if (mHeadersFragment.getView().requestFocus(direction, previouslyFocusedRect)) {
@@ -571,8 +576,11 @@ public class BrowseFragment extends Fragment {
 
         @Override
         public void onRequestChildFocus(View child, View focused) {
-            int childId = child.getId();
+            if (getChildFragmentManager().isDestroyed()) {
+                return;
+            }
             if (!mCanShowHeaders || isInHeadersTransition()) return;
+            int childId = child.getId();
             if (childId == R.id.browse_container_dock && mShowingHeaders) {
                 startHeadersTransitionInternal(false);
             } else if (childId == R.id.browse_headers_dock && !mShowingHeaders) {
@@ -607,6 +615,19 @@ public class BrowseFragment extends Fragment {
                 .getInteger(R.integer.lb_browse_headers_transition_duration);
 
         readArguments(getArguments());
+
+        if (mCanShowHeaders) {
+            if (mHeadersBackStackEnabled) {
+                mWithHeadersBackStackName = LB_HEADERS_BACKSTACK + this;
+                mBackStackChangedListener = new BackStackListener();
+                getFragmentManager().addOnBackStackChangedListener(mBackStackChangedListener);
+                mBackStackChangedListener.load(savedInstanceState);
+            } else {
+                if (savedInstanceState != null) {
+                    mShowingHeaders = savedInstanceState.getBoolean(HEADER_SHOW);
+                }
+            }
+        }
 
     }
 
@@ -702,18 +723,6 @@ public class BrowseFragment extends Fragment {
         sTransitionHelper.excludeChildren(mTitleUpTransition, R.id.container_list, true);
         sTransitionHelper.excludeChildren(mTitleDownTransition, R.id.container_list, true);
 
-        if (mCanShowHeaders) {
-            if (mHeadersBackStackEnabled) {
-                mWithHeadersBackStackName = LB_HEADERS_BACKSTACK + this;
-                mBackStackChangedListener = new BackStackListener();
-                getFragmentManager().addOnBackStackChangedListener(mBackStackChangedListener);
-                mBackStackChangedListener.load(savedInstanceState);
-            } else {
-                if (savedInstanceState != null) {
-                    mShowingHeaders = savedInstanceState.getBoolean(HEADER_SHOW);
-                }
-            }
-        }
         if (savedInstanceState != null) {
             mShowingTitle = savedInstanceState.getBoolean(TITLE_SHOW);
         }
@@ -750,7 +759,7 @@ public class BrowseFragment extends Fragment {
         }
         sTransitionHelper.setDuration(changeBounds, mHeadersTransitionDuration);
         sTransitionHelper.addTransition(mHeadersTransition, changeBounds);
-        sTransitionHelper.addTarget(scale, mRowsFragment.getVerticalGridView());
+        sTransitionHelper.addTarget(scale, mRowsFragment.getScaleFrameLayout());
         sTransitionHelper.setDuration(scale, mHeadersTransitionDuration);
         sTransitionHelper.addTransition(mHeadersTransition, scale);
 
@@ -904,8 +913,8 @@ public class BrowseFragment extends Fragment {
         mRowsFragment.setWindowAlignmentFromTop(mContainerListAlignTop);
         mRowsFragment.setItemAlignment();
 
-        mRowsFragment.getVerticalGridView().setPivotX(0);
-        mRowsFragment.getVerticalGridView().setPivotY(mContainerListAlignTop);
+        mRowsFragment.getScaleFrameLayout().setPivotX(0);
+        mRowsFragment.getScaleFrameLayout().setPivotY(mContainerListAlignTop);
 
         if (mCanShowHeaders && mShowingHeaders && mHeadersFragment.getView() != null) {
             mHeadersFragment.getView().requestFocus();

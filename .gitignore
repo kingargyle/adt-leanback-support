@@ -6,4 +6,6 @@ target
 .project
 bin
 gen
+.DS_Store
+*.versionsBackup
 
