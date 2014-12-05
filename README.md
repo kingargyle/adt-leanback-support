@@ -13,6 +13,6 @@ extension installed.  Then import the projects as existing maven projects.
 
 All items are generated as APKLibs, the support-v4 project is available as apklib or jar.
 
-This library is based on the Android L preview code and will change when google releases the
+This library is based on the Android 5.0 21.0.2 code and will change when google releases the
 latest source.  It should be enough though to let you do Android TV development with ADT for Eclipse.
 
