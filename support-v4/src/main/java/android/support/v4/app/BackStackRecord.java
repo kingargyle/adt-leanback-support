@@ -666,71 +666,67 @@ final class BackStackRecord extends FragmentTransaction implements
         while (op != null) {
             int enterAnim = state != null ? 0 : op.enterAnim;
             int exitAnim = state != null ? 0 : op.exitAnim;
-            switch (op.cmd) {
-                case OP_ADD: {
-                    Fragment f = op.fragment;
-                    f.mNextAnim = enterAnim;
-                    mManager.addFragment(f, false);
-                } break;
-                case OP_REPLACE: {
-                    Fragment f = op.fragment;
-                    if (mManager.mAdded != null) {
-                        for (int i=0; i<mManager.mAdded.size(); i++) {
-                            Fragment old = mManager.mAdded.get(i);
-                            if (FragmentManagerImpl.DEBUG) Log.v(TAG,
-                                    "OP_REPLACE: adding=" + f + " old=" + old);
-                            if (f == null || old.mContainerId == f.mContainerId) {
-                                if (old == f) {
-                                    op.fragment = f = null;
-                                } else {
-                                    if (op.removed == null) {
-                                        op.removed = new ArrayList<Fragment>();
-                                    }
-                                    op.removed.add(old);
-                                    old.mNextAnim = exitAnim;
-                                    if (mAddToBackStack) {
-                                        old.mBackStackNesting += 1;
-                                        if (FragmentManagerImpl.DEBUG) Log.v(TAG, "Bump nesting of "
-                                                + old + " to " + old.mBackStackNesting);
-                                    }
-                                    mManager.removeFragment(old, transition, transitionStyle);
-                                }
-                            }
-                        }
-                    }
-                    if (f != null) {
-                        f.mNextAnim = enterAnim;
-                        mManager.addFragment(f, false);
-                    }
-                } break;
-                case OP_REMOVE: {
-                    Fragment f = op.fragment;
-                    f.mNextAnim = exitAnim;
-                    mManager.removeFragment(f, transition, transitionStyle);
-                } break;
-                case OP_HIDE: {
-                    Fragment f = op.fragment;
-                    f.mNextAnim = exitAnim;
-                    mManager.hideFragment(f, transition, transitionStyle);
-                } break;
-                case OP_SHOW: {
-                    Fragment f = op.fragment;
-                    f.mNextAnim = enterAnim;
-                    mManager.showFragment(f, transition, transitionStyle);
-                } break;
-                case OP_DETACH: {
-                    Fragment f = op.fragment;
-                    f.mNextAnim = exitAnim;
-                    mManager.detachFragment(f, transition, transitionStyle);
-                } break;
-                case OP_ATTACH: {
-                    Fragment f = op.fragment;
-                    f.mNextAnim = enterAnim;
-                    mManager.attachFragment(f, transition, transitionStyle);
-                } break;
-                default: {
-                    throw new IllegalArgumentException("Unknown cmd: " + op.cmd);
-                }
+            Fragment f = op.fragment;
+            if (f != null) {
+	            switch (op.cmd) {
+	                case OP_ADD: {
+	                    f.mNextAnim = enterAnim;
+	                    mManager.addFragment(f, false);
+	                } break;
+	                case OP_REPLACE: {
+	                    if (mManager.mAdded != null) {
+	                        for (int i=0; i<mManager.mAdded.size(); i++) {
+	                            Fragment old = mManager.mAdded.get(i);
+	                            if (FragmentManagerImpl.DEBUG) Log.v(TAG,
+	                                    "OP_REPLACE: adding=" + f + " old=" + old);
+	                            if (f == null || old.mContainerId == f.mContainerId) {
+	                                if (old == f) {
+	                                    op.fragment = f = null;
+	                                } else {
+	                                    if (op.removed == null) {
+	                                        op.removed = new ArrayList<Fragment>();
+	                                    }
+	                                    op.removed.add(old);
+	                                    old.mNextAnim = exitAnim;
+	                                    if (mAddToBackStack) {
+	                                        old.mBackStackNesting += 1;
+	                                        if (FragmentManagerImpl.DEBUG) Log.v(TAG, "Bump nesting of "
+	                                                + old + " to " + old.mBackStackNesting);
+	                                    }
+	                                    mManager.removeFragment(old, transition, transitionStyle);
+	                                }
+	                            }
+	                        }
+	                    }
+	                    if (f != null) {
+	                        f.mNextAnim = enterAnim;
+	                        mManager.addFragment(f, false);
+	                    }
+	                } break;
+	                case OP_REMOVE: {
+	                    f.mNextAnim = exitAnim;
+	                    mManager.removeFragment(f, transition, transitionStyle);
+	                } break;
+	                case OP_HIDE: {
+	                    f.mNextAnim = exitAnim;
+	                    mManager.hideFragment(f, transition, transitionStyle);
+	                } break;
+	                case OP_SHOW: {
+	                    f.mNextAnim = enterAnim;
+	                    mManager.showFragment(f, transition, transitionStyle);
+	                } break;
+	                case OP_DETACH: {
+	                    f.mNextAnim = exitAnim;
+	                    mManager.detachFragment(f, transition, transitionStyle);
+	                } break;
+	                case OP_ATTACH: {
+	                    f.mNextAnim = enterAnim;
+	                    mManager.attachFragment(f, transition, transitionStyle);
+	                } break;
+	                default: {
+	                    throw new IllegalArgumentException("Unknown cmd: " + op.cmd);
+	                }
+	            }
             }
 
             op = op.next;
